@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>todokun 画面イメージ</title>
+<style>
+body{font-family:"Yu Gothic UI",sans-serif;max-width:1000px;margin:20px auto;padding:0 16px;line-height:1.65;color:#222}
+h1{font-size:22px} h2{font-size:17px;border-left:5px solid #2b6cb0;padding-left:8px;margin-top:32px} h3{font-size:15px;margin:16px 0 4px}
+table{border-collapse:collapse;margin:8px 0;width:100%} td,th{border:1px solid #bbb;padding:4px 8px;font-size:13.5px;vertical-align:top} th{background:#eef;text-align:left}
+code{background:#f0f0f0;padding:0 4px} pre{background:#f6f6f6;border:1px solid #ccc;padding:10px;font-size:12.5px;line-height:1.5;overflow:auto}
+.q{background:#fff6dd;border:1px solid #e0c060;padding:6px 14px;margin:8px 0} .rec{color:#c05000;font-weight:bold} .ok{color:#2a7a2a;font-weight:bold} .ng{color:#b33;font-weight:bold}
+.sync{background:#e8f4ff;border:1px solid #9bc;padding:6px 14px;margin:10px 0}
+svg{background:#fafafa;border:1px solid #ccc;max-width:100%}
+</style></head><body>
+<h1>todokun 画面イメージ（ざっくり）</h1>
+<p><b>状態：案（レビュー反映済み）</b>（確定したら「確定」に）。</p>
+<p>ゴール：コードを書く前に、todokun の見た目と操作のイメージを合わせる。ここで違和感があれば、実装前に直す。ワイヤーなので色・フォント・余白は仮（実装では Miharikun と同じ FluentTheme に寄せる）。</p>
+
+<h2>1. 画面イメージ</h2>
+
+<h3>1-1. ビューモード（起動直後の状態。前日からコピーされた今日を、ビューモードで開いている）</h3>
+<svg viewBox="0 0 960 500" width="960" font-size="13" font-family="sans-serif">
+<!-- 左ペイン -->
+<rect x="0" y="0" width="250" height="500" fill="#fff" stroke="#999"/>
+<text x="14" y="26">◀</text><text x="125" y="26" text-anchor="middle" font-weight="bold">2026年10月</text><text x="224" y="26">▶</text>
+<text x="20" y="52" text-anchor="middle" font-size="11" fill="#b33">日</text>
+<text x="55" y="52" text-anchor="middle" font-size="11" fill="#666">月</text>
+<text x="90" y="52" text-anchor="middle" font-size="11" fill="#666">火</text>
+<text x="125" y="52" text-anchor="middle" font-size="11" fill="#666">水</text>
+<text x="160" y="52" text-anchor="middle" font-size="11" fill="#666">木</text>
+<text x="195" y="52" text-anchor="middle" font-size="11" fill="#666">金</text>
+<text x="230" y="52" text-anchor="middle" font-size="11" fill="#0b63c5">土</text>
+<!-- 1行目 -->
+<g font-size="12" text-anchor="middle">
+<text x="20" y="78" fill="#ccc">27</text><text x="55" y="78" fill="#ccc">28</text><text x="90" y="78" fill="#ccc">29</text><text x="125" y="78" fill="#ccc">30</text>
+<text x="160" y="78">1</text><text x="195" y="78">2</text><text x="230" y="78" fill="#0b63c5">3</text>
+<!-- 2行目 -->
+<text x="20" y="104" fill="#b33">4</text><text x="55" y="104">5</text><text x="90" y="104">6</text><text x="125" y="104">7</text><text x="160" y="104">8</text><text x="195" y="104">9</text><text x="230" y="104" fill="#0b63c5">10</text>
+<!-- 3行目 -->
+<text x="20" y="130" fill="#b33">11</text><text x="55" y="130">12</text><text x="90" y="130">13</text>
+<circle cx="125" cy="126" r="12" fill="#e8f1fd" stroke="#0b63c5" stroke-width="2"/><text x="125" y="130" font-weight="bold">14</text>
+<text x="160" y="130">15</text><text x="195" y="130">16</text><text x="230" y="130" fill="#0b63c5">17</text>
+<!-- 4行目 -->
+<text x="20" y="156" fill="#b33">18</text><text x="55" y="156">19</text><text x="90" y="156">20</text><text x="125" y="156">21</text><text x="160" y="156">22</text><text x="195" y="156">23</text><text x="230" y="156" fill="#0b63c5">24</text>
+<!-- 5行目 -->
+<text x="20" y="182" fill="#b33">25</text><text x="55" y="182">26</text><text x="90" y="182">27</text><text x="125" y="182">28</text><text x="160" y="182">29</text><text x="195" y="182">30</text><text x="230" y="182" fill="#0b63c5">31</text>
+</g>
+<!-- ファイルがある日の印（点） -->
+<g fill="#0969da">
+<circle cx="160" cy="84" r="2"/><circle cx="195" cy="84" r="2"/>
+<circle cx="55" cy="110" r="2"/><circle cx="90" cy="110" r="2"/><circle cx="125" cy="110" r="2"/><circle cx="160" cy="110" r="2"/><circle cx="195" cy="110" r="2"/>
+<circle cx="55" cy="136" r="2"/><circle cx="90" cy="136" r="2"/><circle cx="125" cy="137" r="2"/>
+</g>
+<line x1="0" y1="198" x2="250" y2="198" stroke="#ccc"/>
+<text x="10" y="216" font-size="11" fill="#666">10月のTODO（新しい順）</text>
+<!-- 一覧 -->
+<rect x="6" y="226" width="238" height="24" rx="4" fill="#e8f1fd" stroke="#0b63c5" stroke-width="2"/>
+<text x="18" y="243" font-weight="bold">10/14 (水)</text>
+<text x="18" y="269">10/13 (火)</text>
+<text x="18" y="295">10/12 (月)</text>
+<text x="18" y="321">10/9 (金)</text>
+<text x="18" y="347">10/8 (木)</text>
+<text x="18" y="373">10/7 (水)</text>
+<text x="18" y="399">10/6 (火)</text>
+<text x="18" y="425">10/5 (月)</text>
+<text x="18" y="451">10/2 (金)</text>
+<text x="18" y="477">10/1 (木)</text>
+<!-- 右ペイン -->
+<rect x="250" y="0" width="10" height="500" fill="#e4e4e4" stroke="#ccc"/>
+<circle cx="255" cy="240" r="1.5" fill="#888"/><circle cx="255" cy="250" r="1.5" fill="#888"/><circle cx="255" cy="260" r="1.5" fill="#888"/>
+<rect x="260" y="0" width="700" height="500" fill="#fff" stroke="#999"/>
+<rect x="260" y="0" width="700" height="40" fill="#f7f7f7" stroke="#ccc"/>
+<text x="274" y="25" font-size="15" font-weight="bold">2026-10-14 (水)</text>
+<rect x="410" y="10" width="52" height="20" rx="10" fill="#cfe3ff" stroke="#08c"/><text x="420" y="25" font-size="12">ビュー</text>
+<rect x="824" y="7" width="124" height="26" rx="4" fill="#fff" stroke="#999"/><text x="836" y="25" font-size="12">✎ 編集　Ctrl+E</text>
+<!-- 本文（レンダリング結果） -->
+<text x="284" y="76" font-size="18" font-weight="bold">今日のTODO</text>
+<line x1="284" y1="84" x2="940" y2="84" stroke="#ddd"/>
+<g font-size="14">
+<rect x="284" y="102" width="14" height="14" rx="3" fill="#0969da"/><path d="M287,109 L290,112 L295,106" stroke="#fff" stroke-width="2" fill="none"/><text x="308" y="114">資料作成</text>
+<rect x="310" y="132" width="14" height="14" rx="3" fill="#0969da"/><path d="M313,139 L316,142 L321,136" stroke="#fff" stroke-width="2" fill="none"/><text x="334" y="144">構成案</text>
+<rect x="310" y="162" width="14" height="14" rx="3" fill="#0969da"/><path d="M313,169 L316,172 L321,166" stroke="#fff" stroke-width="2" fill="none"/><text x="334" y="174">スライド化</text>
+<rect x="284" y="192" width="14" height="14" rx="3" fill="#fff" stroke="#666"/><text x="308" y="204">レビュー対応</text>
+<rect x="310" y="222" width="14" height="14" rx="3" fill="#0969da"/><path d="M313,229 L316,232 L321,226" stroke="#fff" stroke-width="2" fill="none"/><text x="334" y="234">PR #12 の指摘修正</text>
+<rect x="310" y="252" width="14" height="14" rx="3" fill="#fff" stroke="#666"/><text x="334" y="264">テスト追加</text>
+<rect x="336" y="282" width="14" height="14" rx="3" fill="#fff" stroke="#666"/><text x="360" y="294">境界値のケース</text>
+<rect x="284" y="312" width="14" height="14" rx="3" fill="#fff" stroke="#666"/><text x="308" y="324">ブログ下書き</text>
+</g>
+<text x="284" y="374" font-size="15" font-weight="bold">メモ</text>
+<circle cx="290" cy="399" r="3" fill="#333"/><text x="302" y="404" font-size="14">週次レポートは明日まで</text>
+<!-- 注記 -->
+<text x="400" y="114" font-size="11" fill="#c05000">← 全部済んだ親は ☑（次の日に人間が消す）</text>
+<text x="420" y="204" font-size="11" fill="#c05000">← 子に未完了があるので親は ☐ のまま（運用は人間）</text>
+<text x="480" y="294" font-size="11" fill="#c05000">← 2スペース字下げで多段ネスト</text>
+<text x="284" y="470" font-size="12" fill="#c05000">← → キー：ファイルがある前後の日へ移動（ビューモードのみ）</text>
+<text x="284" y="490" font-size="12" fill="#c05000">← 左右の境（灰色の帯）をドラッグすると、左サイドバーの幅を変えられる</text>
+</svg>
+<p>見どころ：①カレンダーの点＝その日にファイルがある ②一覧は新しい日が上（降順）で「10/14 (水)」だけ ③チェックボックスは☑/☐で表示（クリックしても変わらない。MVP）④ビュー↔編集は <code>Ctrl+E</code>（mac は <code>Cmd+E</code>）⑤左サイドバーと右ビューの間の灰色の帯をドラッグすると、幅を変えられる（カレンダーと一覧は固定の並び。一覧が長いときは一覧だけスクロール）⑥起動時は当日の月で今日が選択され、前日のコピーがビューモードで出る（コピーが無い起動でも同じ。ファイルが無ければ案内文）。</p>
+
+<h3>1-2. 編集モード（右ペインだけ。左ペインはビューモードと同じ）</h3>
+<svg viewBox="0 0 700 400" width="700" font-size="13" font-family="sans-serif">
+<rect x="0" y="0" width="700" height="400" fill="#fff" stroke="#999"/>
+<rect x="0" y="0" width="700" height="40" fill="#f7f7f7" stroke="#ccc"/>
+<text x="14" y="25" font-size="15" font-weight="bold">2026-10-14 (水)</text>
+<rect x="150" y="10" width="116" height="20" rx="10" fill="#e8f1fd" stroke="#0b63c5"/><text x="160" y="25" font-size="12">編集中（未保存）</text>
+<rect x="430" y="7" width="108" height="26" rx="4" fill="#fff" stroke="#999"/><text x="442" y="25" font-size="12">保存　Ctrl+S</text>
+<rect x="548" y="7" width="142" height="26" rx="4" fill="#fff" stroke="#999"/><text x="560" y="25" font-size="12">ビューに戻る　Esc</text>
+<rect x="10" y="48" width="680" height="300" fill="#fafafa" stroke="#aaa"/>
+<g font-family="monospace" font-size="13" xml:space="preserve" style="white-space:pre">
+<text x="22" y="76" xml:space="preserve" style="white-space:pre">## 今日のTODO</text>
+<text x="22" y="102" xml:space="preserve" style="white-space:pre">- [x] 資料作成</text>
+<text x="22" y="128" xml:space="preserve" style="white-space:pre">  - [x] 構成案</text>
+<text x="22" y="154" xml:space="preserve" style="white-space:pre">  - [x] スライド化</text>
+<text x="22" y="180" xml:space="preserve" style="white-space:pre">- [ ] レビュー対応</text>
+<text x="22" y="206" xml:space="preserve" style="white-space:pre">  - [x] PR #12 の指摘修正</text>
+<text x="22" y="232" xml:space="preserve" style="white-space:pre">  - [ ] テスト追加</text>
+<text x="22" y="258" xml:space="preserve" style="white-space:pre">    - [ ] 境界値のケース</text>
+<text x="22" y="284" xml:space="preserve" style="white-space:pre">- [ ] ブログ下書き</text>
+</g>
+<rect x="194" y="244" width="2" height="18" fill="#0b63c5"/>
+<rect x="350" y="84" width="330" height="136" fill="#fff6dd" stroke="#e0c060"/>
+<text x="362" y="106" font-size="12" font-weight="bold" fill="#c05000">編集補助（MVP）</text>
+<text x="362" y="130" font-size="12" fill="#c05000">Tab：行頭に2スペース（字下げ）</text>
+<text x="362" y="152" font-size="12" fill="#c05000">Shift+Tab：2スペース戻す</text>
+<text x="362" y="174" font-size="12" fill="#c05000">Ctrl+Enter：[ ] ⇄ [x] を切り替え</text>
+<text x="362" y="196" font-size="12" fill="#c05000">Enter：次の行に同じ字下げで「- [ ] 」</text>
+<text x="362" y="214" font-size="11" fill="#666">（空の項目で Enter → リストから抜ける）</text>
+<text x="10" y="374" font-size="11" fill="#666">※ 等幅フォント。ここで押す Ctrl は mac では Cmd。</text>
+</svg>
+<p>見どころ：①編集中は上バーに「編集中（未保存）」と「保存」「ビューに戻る」が出る ②縦棒がカーソル（行の強調はしない。素の入力欄） ③保存しても編集のまま（「未保存」の表示だけ消える）。空にして保存するとその日のファイルを削除する（確認が出る）。未保存のまま戻る・別の日へ移る・閉じるときは「保存／破棄／キャンセル」の確認が出る（案）。</p>
+
+<h2>2. 画面の部品と挙動</h2>
+<table>
+<tr><th>部品</th><th>見た目</th><th>挙動</th></tr>
+<tr><td>カレンダー</td><td>月表示。◀ ▶ で月送り。ファイルがある日に点。今日・選択中は丸で強調</td><td>日をクリック→その日を開く（ファイルが無い日は空の日として表示。保存したときに作る）。前後の月の灰色の日は押せない（月は ◀ ▶ だけで切り替え）</td></tr>
+<tr><td>月の一覧</td><td>「10/14 (水)」だけ。新しい日が上</td><td>クリックでその日を開く。選択中は青い枠</td></tr>
+<tr><td>左サイドバーと右ビューの境</td><td>灰色の帯（分割）</td><td>ドラッグで左サイドバーの幅を変える。カレンダーが収まる幅より狭くはできない</td></tr>
+<tr><td>右の上バー</td><td>日付・モード表示・ボタン</td><td>ビュー時「✎ 編集」。編集時「保存」「ビューに戻る」</td></tr>
+<tr><td>ビュー本文</td><td>Markdown描画。チェックボックスは☑/☐、リストの黒丸は出さない</td><td>← → で、ファイルがある前後の日へ（端では何もしない。月をまたぐと左も追従）</td></tr>
+<tr><td>編集本文</td><td>等幅のテキスト入力</td><td>Tab・Shift+Tab・Ctrl+Enter・Enter の補助（上の図）</td></tr>
+<tr><td>ファイルが無い日</td><td>本文に案内文「この日のTODOはまだありません。『編集』で書けます」</td><td>編集して保存したときにファイルができる</td></tr>
+</table>
+
+<h2>3. 色・テーマ（目安。案）</h2>
+<table>
+<tr><th>要素</th><th>ライト</th><th>ダーク</th></tr>
+<tr><td>背景</td><td><code>#ffffff</code></td><td><code>#1e1e1e</code></td></tr>
+<tr><td>文字</td><td><code>#222222</code></td><td><code>#d4d4d4</code></td></tr>
+<tr><td>選択中・今日</td><td>淡い青の地＋青い枠</td><td>暗い青の地＋明るい青の枠</td></tr>
+<tr><td>チェック済み☑</td><td>青の塗り＋白いチェック</td><td>同じ青（暗い地で映える色に調整）</td></tr>
+<tr><td>土・日の数字</td><td>土=青、日=赤</td><td>同じ色相で明るめ</td></tr>
+</table>
+<p>OS のライト/ダークに追従する（図はライトだけ描いた）。</p>
+
+<h2>4. 決まったこと</h2>
+<table>
+<tr><th>問い</th><th>決定</th></tr>
+<tr><td>Q1 週の始まり・土日の色</td><td>A：日曜始まり、土=青・日=赤</td></tr>
+<tr><td>Q2 ファイルがある日の印</td><td>A：数字の下に小さな点。作り方は<b>自前の月グリッド</b>を第一候補にする（数字の下に点を付ける・今日と選択中の丸を描く、のどちらも確実にできるため）。標準の Calendar で同じ見た目にできるなら、それでもよい（PoC で確認）</td></tr>
+<tr><td>Q3 チェック済みの見た目</td><td>A：通常の文字のまま、チェックだけ☑</td></tr>
+<tr><td>カレンダーと一覧</td><td>固定の並び（高さのドラッグはしない）。一覧が長いときは一覧だけスクロール</td></tr>
+<tr><td>左サイドバーと右ビュー</td><td>境の灰色の帯をドラッグして、左サイドバーの幅を変えられる</td></tr>
+<tr><td>起動時コピー直後のモード</td><td>ビューモード。当日の月で今日が選択された状態</td></tr>
+<tr><td>右の上バー</td><td>図のとおりで OK</td></tr>
+<tr><td>保存後のモード</td><td>編集のまま（「未保存」の表示だけ消える）。ビューへは「ビューに戻る」／Esc／Ctrl+E</td></tr>
+<tr><td>空にして保存</td><td>確認「この日のファイルを削除します。よろしいですか？［削除］［キャンセル］」→ 削除するとその日は「ファイルなし」（点・一覧から消える）</td></tr>
+<tr><td>カーソル行の強調・一覧の「今日」タグ</td><td>付けない（素の入力欄。一覧は日付だけ。今日はカレンダーの丸で分かる）</td></tr>
+<tr><td>改行</td><td>単一の改行も改行として表示する</td></tr>
+<tr><td>キャッシュ・二重起動</td><td>キャッシュは exe 隣の <code>cache/</code>。二重起動はしない（2つ目は案内して終了）</td></tr>
+</table>
+<div class="sync">反映先：要件定義 <code>todo-requirements.md</code> の 7 章（起動時コピー）・8.1（左右の分割）・8.2（カレンダー）・13 章（PoC）に反映済み。レビュー後の決定（空で保存→削除＋確認、保存後は編集に留まる、前後月の日は押せない、改行、cache/・単一起動、カーソル行強調と「今日」タグの削除）は 3・6・8.2・8.4・9・11・12・13 章に反映済み。</div>
+</body></html>
