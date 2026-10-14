@@ -1,0 +1,6 @@
+bin/
+obj/
+cache/
+data/
+artifacts/
+.DS_Store

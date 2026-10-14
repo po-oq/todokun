@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:Todokun.Views"
+             x:Class="Todokun.Views.RightPaneView">
+    <!-- 右ペイン：上に細いバー、本文はビュー（WebView）と編集（TextBox）を同じ場所で入れ替える（重ねない。要件 8.3） -->
+    <Grid RowDefinitions="Auto,Auto,*" Background="{DynamicResource PaneBackgroundBrush}">
+        <Border Grid.Row="0" Classes="bar">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" VerticalAlignment="Center">
+                <TextBlock x:Name="DayText" Text="{Binding Editor.DayText}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" />
+                <Border Grid.Column="1" Classes="modebadge" Classes.editing="{Binding Editor.IsEditing}">
+                    <TextBlock x:Name="ModeText" Text="{Binding Editor.ModeText}" FontSize="12" />
+                </Border>
+                <TextBlock x:Name="DirtyText" Grid.Column="2" Text="未保存" IsVisible="{Binding Editor.IsDirty}"
+                           Classes="dirty" VerticalAlignment="Center" Margin="8,0,0,0" />
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6">
+                    <Button x:Name="BeginEditButton" Content="✎ 編集" IsVisible="{Binding Editor.IsViewing}"
+                            Command="{Binding Editor.BeginEditCommand}" />
+                    <Button x:Name="SaveButton" IsVisible="{Binding Editor.IsEditing}" Command="{Binding Editor.SaveCommand}">
+                        <TextBlock x:Name="SaveLabel" Text="保存　Ctrl+S" />
+                    </Button>
+                    <Button x:Name="BackButton" Content="ビューに戻る　Esc" IsVisible="{Binding Editor.IsEditing}"
+                            Command="{Binding Editor.BackToViewCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border x:Name="MessageBar" Grid.Row="1" Classes="messagebar" IsVisible="{Binding Editor.HasMessage}">
+            <TextBlock x:Name="MessageText" Text="{Binding Editor.Message}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid Grid.Row="2">
+            <views:TodoPreview x:Name="Preview" IsVisible="{Binding Editor.IsViewing}" />
+            <TextBox x:Name="EditBox" IsVisible="{Binding Editor.IsEditing}" Classes="mono"
+                     AcceptsReturn="True" AcceptsTab="False" TextWrapping="Wrap"
+                     VerticalContentAlignment="Top" BorderThickness="0" Margin="8" />
+        </Grid>
+    </Grid>
+</UserControl>

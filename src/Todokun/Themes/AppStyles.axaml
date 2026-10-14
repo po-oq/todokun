@@ -1,0 +1,125 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 自前の見た目はテーマの後ろで上書きする（Miharikun の AppStyles を、todokun で使うものだけに削ったもの） -->
+    <Style Selector="Window">
+        <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource WindowTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock"><Setter Property="FontFamily" Value="{DynamicResource UiFont}" /></Style>
+    <Style Selector="Button"><Setter Property="FontFamily" Value="{DynamicResource UiFont}" /></Style>
+    <Style Selector="TextBox"><Setter Property="FontFamily" Value="{DynamicResource UiFont}" /></Style>
+    <Style Selector="TextBlock.dim">
+        <Setter Property="Foreground" Value="{DynamicResource DimTextBrush}" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style Selector="Border.rule">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource RuleBrush}" />
+    </Style>
+
+    <!-- 月送りの ◀ ▶ -->
+    <Style Selector="Button.nav">
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- カレンダー -->
+    <Style Selector="TextBlock.weekday">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource DimTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.weekday.sun"><Setter Property="Foreground" Value="{DynamicResource SundayBrush}" /></Style>
+    <Style Selector="TextBlock.weekday.sat"><Setter Property="Foreground" Value="{DynamicResource SaturdayBrush}" /></Style>
+
+    <Style Selector="Button.day">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.daycircle">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <!-- 今日：枠だけ。選択中：地＋枠 -->
+    <Style Selector="Border.daycircle.today"><Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" /></Style>
+    <Style Selector="Border.daycircle.selected">
+        <Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" />
+    </Style>
+    <Style Selector="TextBlock.daynum">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.daynum.sun"><Setter Property="Foreground" Value="{DynamicResource SundayBrush}" /></Style>
+    <Style Selector="TextBlock.daynum.sat"><Setter Property="Foreground" Value="{DynamicResource SaturdayBrush}" /></Style>
+    <Style Selector="TextBlock.daynum.selected">
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource SelectedTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.outside">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource OutsideTextBrush}" />
+    </Style>
+    <Style Selector="Ellipse.dot">
+        <Setter Property="Width" Value="4" />
+        <Setter Property="Height" Value="4" />
+        <Setter Property="Fill" Value="{DynamicResource DotBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Margin" Value="0,0,0,1" />
+    </Style>
+
+    <!-- 月の一覧 -->
+    <Style Selector="Button.listitem">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="Margin" Value="0,1" />
+    </Style>
+    <Style Selector="Button.listitem.selected">
+        <Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- 右ペインのバー -->
+    <Style Selector="Border.bar">
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource RuleBrush}" />
+        <Setter Property="Background" Value="{DynamicResource BarBackgroundBrush}" />
+    </Style>
+    <Style Selector="Border.modebadge">
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="8,1" />
+        <Setter Property="Margin" Value="10,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource BadgeBackgroundBrush}" />
+    </Style>
+    <Style Selector="Border.modebadge.editing"><Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" /></Style>
+    <Style Selector="TextBlock.dirty"><Setter Property="Foreground" Value="{DynamicResource WarnTextBrush}" /></Style>
+    <Style Selector="Border.messagebar">
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="Background" Value="{DynamicResource WarnBackgroundBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource WarnTextBrush}" />
+    </Style>
+</Styles>

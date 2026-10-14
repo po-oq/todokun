@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Todokun.Views.LeftPaneView">
+    <!-- 上：カレンダー（固定の大きさ）。下：その月の一覧（残りの高さ。長いときは一覧だけスクロール）。
+         境界のドラッグはしない（要件 8.1）。カレンダーは自前の 7×6 のボタン（P0 で決定。要件 8.2） -->
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Background="{DynamicResource PaneBackgroundBrush}">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="8,8,8,4">
+            <Button x:Name="PreviousMonth" Content="◀" Command="{Binding Calendar.PreviousMonthCommand}" Classes="nav" />
+            <TextBlock x:Name="MonthLabel" Grid.Column="1" Text="{Binding Calendar.MonthLabel}" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Button x:Name="NextMonth" Grid.Column="2" Content="▶" Command="{Binding Calendar.NextMonthCommand}" Classes="nav" />
+        </Grid>
+
+        <UniformGrid Grid.Row="1" Columns="7" Margin="8,0">
+            <TextBlock Text="日" Classes="weekday sun" />
+            <TextBlock Text="月" Classes="weekday" />
+            <TextBlock Text="火" Classes="weekday" />
+            <TextBlock Text="水" Classes="weekday" />
+            <TextBlock Text="木" Classes="weekday" />
+            <TextBlock Text="金" Classes="weekday" />
+            <TextBlock Text="土" Classes="weekday sat" />
+        </UniformGrid>
+
+        <ItemsControl x:Name="Cells" Grid.Row="2" Margin="8,0,8,8" ItemsSource="{Binding Calendar.Cells}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Height="36" MinWidth="36">
+                        <Button Classes="day" IsVisible="{Binding InCurrentMonth}" Command="{Binding OpenCommand}">
+                            <Grid>
+                                <Border Classes="daycircle" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsToday}">
+                                    <TextBlock Text="{Binding Text}" Classes="daynum"
+                                               Classes.sun="{Binding IsSunday}" Classes.sat="{Binding IsSaturday}"
+                                               Classes.selected="{Binding IsSelected}" />
+                                </Border>
+                                <Ellipse Classes="dot" IsVisible="{Binding HasFile}" />
+                            </Grid>
+                        </Button>
+                        <!-- 前後の月の日：ボタンにしない（押せない・フォーカスも来ない） -->
+                        <TextBlock Classes="outside" IsVisible="{Binding IsOutside}" Text="{Binding Text}" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Grid.Row="3" Classes="rule" />
+        <Grid Grid.Row="4" RowDefinitions="Auto,*">
+            <TextBlock x:Name="ListHeader" Text="{Binding List.Header}" Classes="dim" Margin="12,8,12,4" />
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="DayItems" ItemsSource="{Binding List.Items}" Margin="6,0,6,6">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Classes="listitem" Classes.selected="{Binding IsSelected}" Command="{Binding OpenCommand}"
+                                    Content="{Binding Text}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

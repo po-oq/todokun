@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Todokun.Core/Todokun.Core.csproj" />
+    <Project Path="src/Todokun.Docs/Todokun.Docs.csproj" />
+    <Project Path="src/Todokun.Presentation/Todokun.Presentation.csproj" />
+    <Project Path="src/Todokun/Todokun.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Todokun.Tests/Todokun.Tests.csproj" />
+    <Project Path="tests/Todokun.UiTests/Todokun.UiTests.csproj" />
+  </Folder>
+</Solution>

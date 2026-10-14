@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- ダーク -->
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1E1E1E" />
+    <SolidColorBrush x:Key="WindowTextBrush" Color="#D4D4D4" />
+    <SolidColorBrush x:Key="PaneBackgroundBrush" Color="#1E1E1E" />
+    <SolidColorBrush x:Key="SplitterBrush" Color="#333333" />
+    <SolidColorBrush x:Key="RuleBrush" Color="#444444" />
+    <SolidColorBrush x:Key="DimTextBrush" Color="#9A9A9A" />
+    <SolidColorBrush x:Key="OutsideTextBrush" Color="#555555" />
+    <SolidColorBrush x:Key="SundayBrush" Color="#F07178" />
+    <SolidColorBrush x:Key="SaturdayBrush" Color="#6CB0FF" />
+    <SolidColorBrush x:Key="DotBrush" Color="#58A6FF" />
+    <SolidColorBrush x:Key="SelectedBackgroundBrush" Color="#1F3A5F" />
+    <SolidColorBrush x:Key="SelectedBorderBrush" Color="#58A6FF" />
+    <SolidColorBrush x:Key="SelectedTextBrush" Color="#9CCBFF" />
+    <SolidColorBrush x:Key="BarBackgroundBrush" Color="#252526" />
+    <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#2D3B4E" />
+    <SolidColorBrush x:Key="WarnBackgroundBrush" Color="#4A3B12" />
+    <SolidColorBrush x:Key="WarnTextBrush" Color="#E3B341" />
+</ResourceDictionary>

@@ -1,0 +1,12 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Todokun.Views.ChoiceDialog"
+        Title="todokun"
+        SizeToContent="WidthAndHeight" MinWidth="380"
+        CanResize="False" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="20">
+        <StackPanel x:Name="Buttons" DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0" />
+        <TextBlock x:Name="MessageText" TextWrapping="Wrap" MaxWidth="460" />
+    </DockPanel>
+</Window>

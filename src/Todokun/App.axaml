@@ -1,0 +1,39 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Todokun.App"
+             Name="todokun"
+             RequestedThemeVariant="Default">
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://todokun/Themes/AppStyles.axaml" />
+    </Application.Styles>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceInclude Source="avares://todokun/Themes/Colors.Light.axaml" />
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceInclude Source="avares://todokun/Themes/Colors.Dark.axaml" />
+                    </ResourceDictionary.MergedDictionaries>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- フォント：OS ごとに指定しないと、日本語の漢字が中国語の字形で描かれることがある（Miharikun と同じ） -->
+            <OnPlatform x:Key="UiFont" x:TypeArguments="FontFamily">
+                <On Options="Windows" Content="Yu Gothic UI, Meiryo UI, Segoe UI" />
+                <On Options="macOS" Content="Hiragino Sans, Hiragino Kaku Gothic ProN" />
+                <On Options="Default" Content="Noto Sans CJK JP, sans-serif" />
+            </OnPlatform>
+            <OnPlatform x:Key="MonoFont" x:TypeArguments="FontFamily">
+                <On Options="Windows" Content="Consolas, BIZ UDGothic, MS Gothic" />
+                <On Options="macOS" Content="Menlo, Osaka-Mono, Hiragino Sans" />
+                <On Options="Default" Content="monospace" />
+            </OnPlatform>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
