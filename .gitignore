@@ -4,3 +4,4 @@ cache/
 data/
 artifacts/
 .DS_Store
+.vs/
