@@ -3,12 +3,12 @@
 次のセッション（新しいエージェント）が作業を続けるための要約。仕様・計画・差分は下のファイルが正で、ここには重複して書かない。
 
 ## いまの状態
-- **ビューのチェックボックスのクリック切替を追加済み（2026-10-14。作業ブランチ `feature/checkbox-toggle`・未コミット）**：TODO・メモ共通。要件 8.6 章・計画の付録 B。描画で `data-line` を付け、クリックは `toggle:<行>:<0|1>` で知らせ、アプリが読み直して印の 1 文字だけ書く。成功時はページを作り直さない（楽観的更新）。テストは `Todokun.Tests` 373 件・`Todokun.UiTests` 41 件。実ブラウザ（Blink）で script の動作は確認済み。**WebView（mac WKWebView・Windows WebView2）での実クリックは未確認**（要件 13.3 に追記）
-- **メモタブを追加済み（2026-10-14。作業ブランチ `feature/memo-tab`・未コミット）**：上部の「TODO」「メモ」タブ。メモはアプリ全体で 1 つ（`data/memo.md`）で、操作は TODO の右ペインと同じ（保存後も編集に留まる）。設計書 `docs/superpowers/specs/2026-10-14-memo-tab-design.md`・手順 `docs/superpowers/plans/2026-10-14-memo-tab.md`・要件 8.5 章・計画の付録 A。テストは `Todokun.Tests` 316 件・`Todokun.UiTests` 41 件。**Windows 実機の確認項目は要件 13.3 の末尾に追記済み（`NativeWebView` が 2 つ同時に生きること、メモタブの IME、など）**
-- ブランチ：作業ブランチ `feature/implement-p0-p7` は **ローカルの `main` にマージ済み（fast-forward。`main` = `784eb57`）**。作業ブランチは残してある。**push・PR は未実施**（origin への反映は利用者が頼んだときだけ）
-- 履歴：`d8b25f8`（P0 の結果と `poc/`）→ `4443842`（P1〜P7 の実装）→ `784eb57`（画面のモダン化）
-- P0〜P7 は **mac で実装・確認済み**。**Windows 11 実機の確認はすべて未実施**（要件 15 章の完了条件）
-- テスト（メモタブ追加前）：`Todokun.Tests` 281 件・`Todokun.UiTests` 34 件、ビルドは警告 0・エラー 0
+- **ローカルの `main`（`1ec19d8`）に全部マージ済み（すべて fast-forward）。push・PR は未実施**（origin への反映は利用者が頼んだときだけ）。作業ブランチ `feature/implement-p0-p7`・`feature/memo-tab`・`feature/checkbox-toggle` は残してある
+- 履歴：`d8b25f8`（P0 の結果と `poc/`）→ `4443842`（P1〜P7 の実装）→ `784eb57`（画面のモダン化）→ `294f487`（メモタブ）→ `1ec19d8`（ビューのチェックボックスのクリック切替）
+- **メモタブ（2026-10-14）**：上部の「TODO」「メモ」タブ。メモはアプリ全体で 1 つ（`data/memo.md`）で、操作は TODO の右ペインと同じ（保存後も編集に留まる）。設計書 `docs/superpowers/specs/2026-10-14-memo-tab-design.md`・手順 `docs/superpowers/plans/2026-10-14-memo-tab.md`・要件 8.5 章・計画の付録 A
+- **ビューのチェックボックスのクリック切替（2026-10-14）**：TODO・メモ共通。要件 8.6 章・計画の付録 B。描画で `data-line` を付け、クリックは `toggle:<行>:<0|1>` で知らせ、アプリが読み直して印の 1 文字だけ書く。成功時はページを作り直さない（楽観的更新）。実ブラウザ（Blink）で script の動作は確認済み。**WebView（mac WKWebView・Windows WebView2）での実クリックは未確認**
+- P0〜P7・メモタブ・チェック切替は **mac で実装・確認済み**。**Windows 11 実機の確認はすべて未実施**（要件 15 章の完了条件。メモタブ・チェック切替の確認項目は要件 13.3 の末尾に追記済み：`NativeWebView` が 2 つ同時に生きること、メモタブの IME、クリックの書き込み、など）
+- テスト：`Todokun.Tests` 373 件・`Todokun.UiTests` 41 件、ビルドは警告 0・エラー 0
 
 ## 正とする文書（読む順）
 1. `docs/todo-requirements.md` — 仕様の正。**13.3 に「Windows 実機で残る確認」12 項目の一覧**がある
