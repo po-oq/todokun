@@ -78,6 +78,7 @@ public abstract partial class DocumentEditorSession : ObservableObject
     /// <summary>プレビューに出すもの。</summary>
     public abstract PreviewSource Preview { get; }
 
+    protected abstract DayContent StoreRead();
     protected abstract bool StoreExists();
     /// <summary>書く。失敗は <see cref="IOException"/>・<see cref="UnauthorizedAccessException"/> のまま上げる。</summary>
     protected abstract void StoreWrite(string text);
@@ -98,6 +99,12 @@ public abstract partial class DocumentEditorSession : ObservableObject
 
     /// <summary>表示が変わった（開いた・保存した・削除した）。引数 true は同じものの作り直し。UI スレッドで呼ばれる。</summary>
     public event Action<bool>? ContentChanged;
+
+    /// <summary>
+    /// ビューのチェックボックスのクリックで内容が変わった（ページは先に見た目を変えているので、作り直さない）。
+    /// 購読側は「いまのプレビュー」を持ち直すだけでよい。
+    /// </summary>
+    public event Action? ContentUpdatedInPlace;
 
     // ── 表示用 ──
     public bool IsEditing => Mode == EditorMode.Edit;
@@ -236,6 +243,82 @@ public abstract partial class DocumentEditorSession : ObservableObject
         AfterDeleted();
         ContentChanged?.Invoke(true);
         return SaveResult.Deleted;
+    }
+
+    // ── ビューのチェックボックス（楽観的更新の裏側） ──
+
+    /// <summary>
+    /// ビューのチェックボックスのクリック（<paramref name="line"/> は md の 0 始まりの行、<paramref name="newChecked"/> は押した後の状態）。
+    /// ページは先に見た目を変えている。ここでは<b>ファイルを読み直して</b>その行を確かめ、印の 1 文字だけを書く
+    /// （表示した後に外で変わっていても、古い内容で上書きしない）。書けたら true。
+    /// 書けなかったら理由を <see cref="Message"/> に出し、ページを作り直して見た目を戻す。ビューのときだけ効く。
+    /// </summary>
+    public bool ToggleCheck(int line, bool newChecked)
+    {
+        if (IsConfirming || Mode != EditorMode.View) return false;
+
+        var (canWrite, reason) = _writable();
+        if (!canWrite)
+        {
+            Message = $"データの保存先に書き込めないため、チェックを変えられません：{reason}";
+            ContentChanged?.Invoke(true);
+            return false;
+        }
+
+        var fresh = StoreRead();
+        if (fresh is not DayContent.Loaded loaded)
+        {
+            // 読めない・ファイルが無い（外で変わった）：何も書かず、いまの状態を見せる
+            _generation++;
+            Content = fresh;
+            Message = fresh is DayContent.Failed failed
+                ? $"チェックボックスを更新できませんでした。ファイルを読めません：{failed.Reason}"
+                : "チェックボックスを更新できませんでした。ファイルが見つかりません";
+            ContentChanged?.Invoke(true);
+            return false;
+        }
+
+        var result = TaskToggle.Toggle(loaded.Text, line, newChecked);
+        switch (result.Status)
+        {
+            case TaskToggleStatus.Toggled:
+                try
+                {
+                    StoreWrite(result.Text);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Message = $"保存できませんでした：{ex.Message}";
+                    ContentChanged?.Invoke(true);
+                    return false;
+                }
+                _generation++;
+                Content = new DayContent.Loaded(Norm(result.Text));
+                Message = null;
+                AfterWritten();
+                ContentUpdatedInPlace?.Invoke();
+                return true;
+
+            case TaskToggleStatus.AlreadyInState:
+                // 外で先に同じ状態になっていた：書かない。ページの見た目は合っている
+                var text = Norm(loaded.Text);
+                if (Content is not DayContent.Loaded current || current.Text != text)
+                {
+                    _generation++;
+                    Content = new DayContent.Loaded(text);
+                }
+                Message = null;
+                ContentUpdatedInPlace?.Invoke();
+                return true;
+
+            default:
+                // その行はチェック項目でなくなっている（外で変わった）：書かず、ファイルの内容で描き直す
+                _generation++;
+                Content = new DayContent.Loaded(Norm(loaded.Text));
+                Message = "チェックボックスを更新できませんでした。ファイルが外で変更されています";
+                ContentChanged?.Invoke(true);
+                return false;
+        }
     }
 
     // ── ビューに戻る・閉じる ──

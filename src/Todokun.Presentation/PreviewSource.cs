@@ -45,4 +45,10 @@ public interface IPreviewHost
 
     /// <summary>ページからキーが届いた。UI スレッドで呼ばれる。</summary>
     void OnPageKey(PageKey key);
+
+    /// <summary>
+    /// ページのチェックボックスがクリックされた（<paramref name="line"/> は md の 0 始まりの行、<paramref name="isChecked"/> は押した後の状態）。
+    /// UI スレッドで呼ばれる。見た目はページが先に変えている。
+    /// </summary>
+    void OnCheckboxToggled(int line, bool isChecked);
 }

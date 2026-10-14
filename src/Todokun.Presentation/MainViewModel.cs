@@ -45,6 +45,7 @@ public sealed class MainViewModel : IDocumentPane
             _current = Editor.Preview;
             PreviewChanged?.Invoke(_current, reload);
         };
+        Editor.ContentUpdatedInPlace += () => _current = Editor.Preview;   // チェックボックスのクリック（作り直さない）
         LeftPane.Cursor.OpenDayRequested += day => _ = OpenDayAsync(day);
         Editor.Open(today);
         memoEditor.Load();
@@ -139,6 +140,8 @@ public sealed class MainViewModel : IDocumentPane
                 break;
         }
     }
+
+    public void OnCheckboxToggled(int line, bool isChecked) => Editor.ToggleCheck(line, isChecked);
 
     public void OnPageKey(PageKey key)
     {

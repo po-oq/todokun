@@ -24,6 +24,8 @@ public sealed class MemoPaneViewModel : IDocumentPane
             _current = editor.Preview;
             PreviewChanged?.Invoke(_current, reload);
         };
+        // チェックボックスのクリック：ページは作り直さない（見た目は先に変わっている）。次の描画のために持ち直すだけ
+        editor.ContentUpdatedInPlace += () => _current = editor.Preview;
     }
 
     public MemoEditorSession Editor { get; }
@@ -47,6 +49,8 @@ public sealed class MemoPaneViewModel : IDocumentPane
         if (Editor.IsConfirming) return;
         if (key == PageKey.BeginEdit) _modE.OnPageBeginEdit();
     }
+
+    public void OnCheckboxToggled(int line, bool isChecked) => Editor.ToggleCheck(line, isChecked);
 
     /// <summary>ウィンドウの Mod+E（メモタブが見えているとき）。</summary>
     public bool OnModE() => _modE.OnModE();

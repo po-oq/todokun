@@ -31,6 +31,7 @@ public sealed partial class DayEditorSession : DocumentEditorSession
         OnPropertyChanged(nameof(HeaderText));
     }
 
+    protected override DayContent StoreRead() => _store.Read(Day);
     protected override bool StoreExists() => _store.Exists(Day);
     protected override void StoreWrite(string text) => _store.Write(Day, text);
     protected override void StoreDelete() => _store.Delete(Day);

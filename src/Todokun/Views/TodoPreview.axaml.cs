@@ -215,7 +215,8 @@ public partial class TodoPreview : UserControl
         }
     }
 
-    // ページからの知らせ（invokeCSharpAction）。受けるのは key:ArrowLeft・key:ArrowRight・key:BeginEdit だけ。他は捨てる。
+    // ページからの知らせ（invokeCSharpAction）。受けるのは key:ArrowLeft・key:ArrowRight・key:BeginEdit と、
+    // チェックボックスの toggle:<行>:<0|1> だけ。他は捨てる。
     private void OnWebMessageReceived(object? sender, WebMessageReceivedEventArgs e)
     {
         var key = PreviewKeyMessage.Parse(e.Body) switch
@@ -225,7 +226,13 @@ public partial class TodoPreview : UserControl
             PreviewKey.BeginEdit => PageKey.BeginEdit,
             _ => null,
         };
-        if (key is { } k) Dispatcher.UIThread.Post(() => _vm?.OnPageKey(k));
+        if (key is { } k)
+        {
+            Dispatcher.UIThread.Post(() => _vm?.OnPageKey(k));
+            return;
+        }
+        if (PreviewCheckboxMessage.Parse(e.Body) is { } box)
+            Dispatcher.UIThread.Post(() => _vm?.OnCheckboxToggled(box.Line, box.Checked));
     }
 
     // target="_blank" や window.open：同じ振り分けにして、新しいウィンドウは作らない。

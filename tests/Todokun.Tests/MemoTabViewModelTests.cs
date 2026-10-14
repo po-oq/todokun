@@ -157,4 +157,41 @@ public sealed class MemoTabViewModelTests : IDisposable
         Assert.Equal([true], todo);
         Assert.Equal([true], memo);
     }
+
+    [Fact]
+    public void Todo_checkbox_click_writes_without_redrawing_and_keeps_the_next_preview_current()
+    {
+        var vm = Vm(null, "2026-10-14");
+        var redraws = 0;
+        vm.PreviewChanged += (_, _) => redraws++;
+        vm.OnCheckboxToggled(0, true);
+        Assert.Equal(0, redraws);   // 楽観的更新：ページは作り直さない
+        Assert.Equal("- [x] 2026-10-14", File.ReadAllText(new DayStore(_t.Path).PathOf(Today)));
+        Assert.Equal("- [x] 2026-10-14", Assert.IsType<PreviewSource.Markdown>(vm.CurrentPreview).Text);
+    }
+
+    [Fact]
+    public void Memo_checkbox_click_writes_the_memo_file()
+    {
+        new MemoStore(_t.Path).Write("- [ ] m");
+        var vm = Vm();
+        var redraws = 0;
+        vm.Memo.PreviewChanged += (_, _) => redraws++;
+        vm.Memo.OnCheckboxToggled(0, true);
+        Assert.Equal(0, redraws);
+        Assert.Equal("- [x] m", File.ReadAllText(Path.Combine(_t.Path, "memo.md")));
+        Assert.Equal("- [x] m", Assert.IsType<PreviewSource.Markdown>(vm.Memo.CurrentPreview).Text);
+    }
+
+    [Fact]
+    public void Failed_checkbox_click_redraws_to_revert_the_page()
+    {
+        var vm = Vm(null, "2026-10-14");
+        var redraws = new List<bool>();
+        vm.PreviewChanged += (_, reload) => redraws.Add(reload);
+        File.WriteAllText(new DayStore(_t.Path).PathOf(Today), "changed outside");
+        vm.OnCheckboxToggled(0, true);
+        Assert.Equal([true], redraws);
+        Assert.StartsWith("チェックボックスを更新できませんでした", vm.Editor.Message);
+    }
 }

@@ -22,6 +22,7 @@ public sealed class MemoEditorSession : DocumentEditorSession
         ShowContent(_store.Read());
     }
 
+    protected override DayContent StoreRead() => _store.Read();
     protected override bool StoreExists() => _store.Exists();
     protected override void StoreWrite(string text) => _store.Write(text);
     protected override void StoreDelete() => _store.Delete();
