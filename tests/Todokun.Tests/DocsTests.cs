@@ -137,6 +137,38 @@ public class TodoRendererTests
     }
 
     [Fact]
+    public void Task_items_carry_their_source_line_and_nothing_else_does()
+    {
+        var html = Body(R("# t\n\n- [ ] a\n  - [x] b\n- plain\n  - [ ] nested\n\n```\n- [ ] code\n```\n\n- [ ] last"));
+        Assert.Equal(["2", "3", "5", "11"], Regex.Matches(html, @"<li class=""task-list-item"" data-line=""(\d+)""").Select(m => m.Groups[1].Value));
+        Assert.Equal(4, Regex.Matches(html, "data-line=").Count);   // 通常項目・コードブロックには付かない
+        Assert.Contains("<li>plain", html);
+    }
+
+    [Fact]
+    public void Source_lines_are_the_same_for_crlf_text()
+    {
+        var html = Body(R("# t\r\n\r\n- [ ] a\r\n  - [x] b"));
+        Assert.Equal(["2", "3"], Regex.Matches(html, @"data-line=""(\d+)""").Select(m => m.Groups[1].Value));
+    }
+
+    [Fact]
+    public void Numbered_and_quoted_task_items_carry_the_line_too()
+    {
+        var html = Body(R("1. [ ] n\n\n> - [ ] q"));
+        Assert.Equal(["0", "2"], Regex.Matches(html, @"data-line=""(\d+)""").Select(m => m.Groups[1].Value));
+    }
+
+    [Fact]
+    public void Click_script_reports_the_checkbox_to_the_app_and_lets_it_flip()
+    {
+        var html = R("- [ ] a");
+        Assert.Contains("invokeCSharpAction('toggle:'", html);
+        Assert.Contains("closest('li.task-list-item')", html);
+        Assert.DoesNotContain("disabled", html);
+    }
+
+    [Fact]
     public void Key_forwarder_does_not_send_for_repeat_before_sending_begin_edit()
     {
         var s = KeyForwarderScript.For(false);
@@ -169,4 +201,36 @@ public class PreviewKeyMessageTests
     [InlineData(" key:ArrowLeft")]
     public void Drops_everything_else(string? body) =>
         Assert.Null(PreviewKeyMessage.Parse(body));
+}
+
+
+public class PreviewCheckboxMessageTests
+{
+    [Theory]
+    [InlineData("toggle:2:1", 2, true)]
+    [InlineData("toggle:0:0", 0, false)]
+    [InlineData("toggle:123:1", 123, true)]
+    [InlineData("\"toggle:5:0\"", 5, false)]
+    public void Accepts_line_and_state(string body, int line, bool isChecked)
+    {
+        var m = PreviewCheckboxMessage.Parse(body);
+        Assert.NotNull(m);
+        Assert.Equal(line, m.Value.Line);
+        Assert.Equal(isChecked, m.Value.Checked);
+    }
+
+    [Theory]
+    [InlineData("toggle:")]
+    [InlineData("toggle:1")]
+    [InlineData("toggle:a:1")]
+    [InlineData("toggle:-1:1")]
+    [InlineData("toggle:1:2")]
+    [InlineData("toggle:1:1:1")]
+    [InlineData("toggle:99999999999:1")]
+    [InlineData("key:BeginEdit")]
+    [InlineData(" toggle:1:1")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void Drops_everything_else(string? body) =>
+        Assert.Null(PreviewCheckboxMessage.Parse(body));
 }
