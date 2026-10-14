@@ -32,7 +32,7 @@
                             <Grid>
                                 <Border Classes="daycircle" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsToday}">
                                     <TextBlock Text="{Binding Text}" Classes="daynum"
-                                               Classes.sun="{Binding IsSunday}" Classes.sat="{Binding IsSaturday}"
+                                               Classes.sun="{Binding IsRedDay}" Classes.sat="{Binding IsBlueDay}"
                                                Classes.selected="{Binding IsSelected}" />
                                 </Border>
                                 <Ellipse Classes="dot" IsVisible="{Binding HasFile}" />

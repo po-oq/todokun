@@ -72,6 +72,23 @@ public class PresentationTests
         Assert.True(vm.Calendar.Cells[0].IsSunday);
         Assert.True(vm.Calendar.Cells[6].IsSaturday);
         Assert.False(vm.Calendar.Cells[3].IsSunday || vm.Calendar.Cells[3].IsSaturday);
+        Assert.True(vm.Calendar.Cells[0].IsRedDay);
+        Assert.True(vm.Calendar.Cells[6].IsBlueDay);
+    }
+
+    [Fact]
+    public void Holiday_is_red_and_a_holiday_saturday_is_not_blue()
+    {
+        var (t, index, _) = Make();
+        using var _t = t;
+        var vm = new LeftPaneViewModel(index, Today);
+        var sports = vm.Calendar.Cells.First(c => c.Day == new DateOnly(2026, 10, 12));
+        Assert.True(sports.IsHoliday);
+        Assert.True(sports.IsRedDay);
+        Assert.False(vm.Calendar.Cells.First(c => c.Day == new DateOnly(2026, 10, 13)).IsHoliday);
+        var holidaySaturday = new CalendarCell(new DateOnly(2026, 5, 2), true, false, false, false, true, _ => { });
+        Assert.True(holidaySaturday.IsRedDay);
+        Assert.False(holidaySaturday.IsBlueDay);
     }
 
     [Fact]

@@ -6,7 +6,7 @@ using Todokun.Core;
 namespace Todokun.Presentation;
 
 /// <summary>月グリッドの 1 マス。</summary>
-public sealed class CalendarCell(DateOnly day, bool inMonth, bool hasFile, bool isToday, bool isSelected, Action<DateOnly> open)
+public sealed class CalendarCell(DateOnly day, bool inMonth, bool hasFile, bool isToday, bool isSelected, bool isHoliday, Action<DateOnly> open)
 {
     public DateOnly Day { get; } = day;
     public string Text { get; } = day.Day.ToString();
@@ -20,6 +20,12 @@ public sealed class CalendarCell(DateOnly day, bool inMonth, bool hasFile, bool 
     public bool IsSelected { get; } = isSelected;
     public bool IsSunday => Day.DayOfWeek == DayOfWeek.Sunday;
     public bool IsSaturday => Day.DayOfWeek == DayOfWeek.Saturday;
+    /// <summary>祝日（振替休日・国民の休日を含む）。</summary>
+    public bool IsHoliday { get; } = isHoliday;
+    /// <summary>数字を赤にする日：日曜と祝日（土曜の祝日も赤）。</summary>
+    public bool IsRedDay => IsSunday || IsHoliday;
+    /// <summary>数字を青にする日：祝日でない土曜。</summary>
+    public bool IsBlueDay => IsSaturday && !IsHoliday;
     public IRelayCommand OpenCommand { get; } = new RelayCommand(() => { if (inMonth) open(day); });
 }
 
@@ -66,7 +72,7 @@ public sealed partial class CalendarViewModel : ObservableObject
         {
             var d = start.AddDays(i);
             var inMonth = d.Year == month.Year && d.Month == month.Month;
-            cells[i] = new CalendarCell(d, inMonth, _index.Contains(d), d == today, inMonth && d == _cursor.SelectedDay, _cursor.RequestOpenDay);
+            cells[i] = new CalendarCell(d, inMonth, _index.Contains(d), d == today, inMonth && d == _cursor.SelectedDay, JapaneseHolidays.IsHoliday(d), _cursor.RequestOpenDay);
         }
         Cells = cells;
         MonthLabel = $"{month.Year}年 {month.Month}月";
