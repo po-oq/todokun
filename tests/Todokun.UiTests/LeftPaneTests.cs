@@ -137,7 +137,7 @@ public sealed class LeftPaneTests : IDisposable
         Assert.Equal(Color.Parse("#FFFFFF"), ((ISolidColorBrush)w.Background!).Color);
         app.RequestedThemeVariant = ThemeVariant.Dark;
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(Color.Parse("#1E1E1E"), ((ISolidColorBrush)w.Background!).Color);
+        Assert.Equal(Color.Parse("#1E1F22"), ((ISolidColorBrush)w.Background!).Color);
         app.RequestedThemeVariant = ThemeVariant.Default;
     }
 
@@ -152,12 +152,22 @@ public sealed class LeftPaneTests : IDisposable
         foreach (var (name, v) in new[] { ("light", ThemeVariant.Light), ("dark", ThemeVariant.Dark) })
         {
             app.RequestedThemeVariant = v;
+            vm.Editor.LeaveEditAsync().GetAwaiter().GetResult();
             Dispatcher.UIThread.RunJobs();
-            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
-#pragma warning disable CS0618
-            w.CaptureRenderedFrame()!.Save(Path.Combine(dir, $"left-{name}.png"));
-#pragma warning restore CS0618
+            Save(w, Path.Combine(dir, $"view-{name}.png"));
+            vm.Editor.SetDraft(vm.Editor.Draft);
+            vm.Editor.BeginEdit();
+            Dispatcher.UIThread.RunJobs();
+            Save(w, Path.Combine(dir, $"edit-{name}.png"));
         }
         app.RequestedThemeVariant = ThemeVariant.Default;
     }
+
+#pragma warning disable CS0618
+    private static void Save(Window w, string path)
+    {
+        Dispatcher.UIThread.RunJobs();
+        w.CaptureRenderedFrame()!.Save(path);
+    }
+#pragma warning restore CS0618
 }

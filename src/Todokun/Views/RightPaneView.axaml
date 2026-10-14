@@ -15,7 +15,7 @@
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6">
                     <Button x:Name="BeginEditButton" Content="✎ 編集" IsVisible="{Binding Editor.IsViewing}"
                             Command="{Binding Editor.BeginEditCommand}" />
-                    <Button x:Name="SaveButton" IsVisible="{Binding Editor.IsEditing}" Command="{Binding Editor.SaveCommand}">
+                    <Button x:Name="SaveButton" Classes="primary" IsVisible="{Binding Editor.IsEditing}" Command="{Binding Editor.SaveCommand}">
                         <TextBlock x:Name="SaveLabel" Text="保存　Ctrl+S" />
                     </Button>
                     <Button x:Name="BackButton" Content="ビューに戻る　Esc" IsVisible="{Binding Editor.IsEditing}"
@@ -30,9 +30,9 @@
 
         <Grid Grid.Row="2">
             <views:TodoPreview x:Name="Preview" IsVisible="{Binding Editor.IsViewing}" />
-            <TextBox x:Name="EditBox" IsVisible="{Binding Editor.IsEditing}" Classes="mono"
+            <TextBox x:Name="EditBox" IsVisible="{Binding Editor.IsEditing}" Classes="mono editor"
                      AcceptsReturn="True" AcceptsTab="False" TextWrapping="Wrap"
-                     VerticalContentAlignment="Top" BorderThickness="0" Margin="8" />
+                     VerticalContentAlignment="Top" />
         </Grid>
     </Grid>
 </UserControl>

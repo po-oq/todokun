@@ -1,6 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- 自前の見た目はテーマの後ろで上書きする（Miharikun の AppStyles を、todokun で使うものだけに削ったもの） -->
+    <!-- 自前の見た目はテーマ（FluentTheme）の後ろで上書きする。Miharikun と同じ方針：丸み 8・細い枠・面の分け方で「モダン」に寄せる -->
     <Style Selector="Window">
         <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
         <Setter Property="FontSize" Value="13" />
@@ -10,21 +10,61 @@
     <Style Selector="TextBlock"><Setter Property="FontFamily" Value="{DynamicResource UiFont}" /></Style>
     <Style Selector="Button"><Setter Property="FontFamily" Value="{DynamicResource UiFont}" /></Style>
     <Style Selector="TextBox"><Setter Property="FontFamily" Value="{DynamicResource UiFont}" /></Style>
+    <Style Selector="TextBlock.mono"><Setter Property="FontFamily" Value="{DynamicResource MonoFont}" /></Style>
+    <Style Selector="TextBox.mono">
+        <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
     <Style Selector="TextBlock.dim">
         <Setter Property="Foreground" Value="{DynamicResource DimTextBrush}" />
         <Setter Property="FontSize" Value="11" />
     </Style>
     <Style Selector="Border.rule">
         <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="12,0" />
         <Setter Property="Background" Value="{DynamicResource RuleBrush}" />
     </Style>
 
-    <!-- 月送りの ◀ ▶ -->
+    <!-- 普通のボタン：面の色・細い枠・丸み。ホバーで枠が青くなる -->
+    <Style Selector="Button">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource RuleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,6" />
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" />
+    </Style>
+    <!-- 主な操作（保存・［保存］ボタン） -->
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SelectedTextBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SelectedTextBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentTextBrush}" />
+    </Style>
+    <Style Selector="Button.primary TextBlock"><Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" /></Style>
+
+    <!-- 月送りの ◀ ▶：枠なし。ホバーで丸い地 -->
     <Style Selector="Button.nav">
         <Setter Property="Padding" Value="10,4" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource DimTextBrush}" />
     </Style>
+    <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <!-- 左ペイン -->
+    <Style Selector="Grid.sidebar"><Setter Property="Background" Value="{DynamicResource SidebarBackgroundBrush}" /></Style>
 
     <!-- カレンダー -->
     <Style Selector="TextBlock.weekday">
@@ -44,34 +84,45 @@
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
-    <Style Selector="Border.daycircle">
-        <Setter Property="Width" Value="28" />
-        <Setter Property="Height" Value="28" />
-        <Setter Property="CornerRadius" Value="14" />
-        <Setter Property="BorderThickness" Value="2" />
+    <!-- ホバーの四角い地は出さず、日の丸だけを淡くする -->
+    <Style Selector="Button.day:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
-    <!-- 今日：枠だけ。選択中：地＋枠 -->
+    <Style Selector="Button.day:pointerover Border.daycircle">
+        <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+    </Style>
+    <Style Selector="Border.daycircle">
+        <Setter Property="Width" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <!-- 今日：枠だけ。選択中：青の地（白い数字） -->
     <Style Selector="Border.daycircle.today"><Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" /></Style>
     <Style Selector="Border.daycircle.selected">
-        <Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.day:pointerover Border.daycircle.selected">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="TextBlock.daynum">
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="12.5" />
     </Style>
     <Style Selector="TextBlock.daynum.sun"><Setter Property="Foreground" Value="{DynamicResource SundayBrush}" /></Style>
     <Style Selector="TextBlock.daynum.sat"><Setter Property="Foreground" Value="{DynamicResource SaturdayBrush}" /></Style>
     <Style Selector="TextBlock.daynum.selected">
-        <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Foreground" Value="{DynamicResource SelectedTextBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
     </Style>
     <Style Selector="TextBlock.outside">
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="12.5" />
         <Setter Property="Foreground" Value="{DynamicResource OutsideTextBrush}" />
     </Style>
     <Style Selector="Ellipse.dot">
@@ -82,44 +133,68 @@
         <Setter Property="VerticalAlignment" Value="Bottom" />
         <Setter Property="Margin" Value="0,0,0,1" />
     </Style>
-
-    <!-- 月の一覧 -->
+    <!-- 月の一覧：ピル型。選択は淡い青の面（枠なし）。ホバーで淡い地 -->
     <Style Selector="Button.listitem">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="2" />
-        <Setter Property="CornerRadius" Value="4" />
-        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,7" />
         <Setter Property="Margin" Value="0,1" />
+    </Style>
+    <Style Selector="Button.listitem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="Button.listitem.selected">
         <Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SelectedTextBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.listitem.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" />
     </Style>
 
     <!-- 右ペインのバー -->
     <Style Selector="Border.bar">
-        <Setter Property="Padding" Value="12,6" />
-        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="MinHeight" Value="52" />
         <Setter Property="BorderThickness" Value="0,0,0,1" />
         <Setter Property="BorderBrush" Value="{DynamicResource RuleBrush}" />
         <Setter Property="Background" Value="{DynamicResource BarBackgroundBrush}" />
     </Style>
     <Style Selector="Border.modebadge">
-        <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Padding" Value="8,1" />
-        <Setter Property="Margin" Value="10,0,0,0" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="10,2" />
+        <Setter Property="Margin" Value="12,0,0,0" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Background" Value="{DynamicResource BadgeBackgroundBrush}" />
     </Style>
     <Style Selector="Border.modebadge.editing"><Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" /></Style>
+    <Style Selector="Border.modebadge.editing TextBlock"><Setter Property="Foreground" Value="{DynamicResource SelectedTextBrush}" /></Style>
     <Style Selector="TextBlock.dirty"><Setter Property="Foreground" Value="{DynamicResource WarnTextBrush}" /></Style>
     <Style Selector="Border.messagebar">
-        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="Padding" Value="16,8" />
         <Setter Property="Background" Value="{DynamicResource WarnBackgroundBrush}" />
         <Setter Property="TextElement.Foreground" Value="{DynamicResource WarnTextBrush}" />
+    </Style>
+
+    <!-- 編集欄：面の色・細い枠・丸み -->
+    <Style Selector="TextBox.editor">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource RuleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,10" />
+        <Setter Property="Margin" Value="16" />
+    </Style>
+    <!-- FluentTheme はフォーカス・ホバー時に入力欄の地を別の色にする（ダークで真っ黒になる）。面の色のままにする -->
+    <Style Selector="TextBox.editor:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBox.editor:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     </Style>
 </Styles>

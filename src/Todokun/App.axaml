@@ -23,6 +23,9 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
+            <!-- 丸み（Miharikun と同じ。FluentTheme の部品すべての角に効く） -->
+            <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+
             <!-- フォント：OS ごとに指定しないと、日本語の漢字が中国語の字形で描かれることがある（Miharikun と同じ） -->
             <OnPlatform x:Key="UiFont" x:TypeArguments="FontFamily">
                 <On Options="Windows" Content="Yu Gothic UI, Meiryo UI, Segoe UI" />

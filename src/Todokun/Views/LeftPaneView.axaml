@@ -3,7 +3,7 @@
              x:Class="Todokun.Views.LeftPaneView">
     <!-- 上：カレンダー（固定の大きさ）。下：その月の一覧（残りの高さ。長いときは一覧だけスクロール）。
          境界のドラッグはしない（要件 8.1）。カレンダーは自前の 7×6 のボタン（P0 で決定。要件 8.2） -->
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Background="{DynamicResource PaneBackgroundBrush}">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Classes="sidebar">
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="8,8,8,4">
             <Button x:Name="PreviousMonth" Content="◀" Command="{Binding Calendar.PreviousMonthCommand}" Classes="nav" />
             <TextBlock x:Name="MonthLabel" Grid.Column="1" Text="{Binding Calendar.MonthLabel}" FontWeight="SemiBold"
@@ -27,7 +27,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Grid Height="36" MinWidth="36">
+                    <Grid Height="38" MinWidth="36">
                         <Button Classes="day" IsVisible="{Binding InCurrentMonth}" Command="{Binding OpenCommand}">
                             <Grid>
                                 <Border Classes="daycircle" Classes.selected="{Binding IsSelected}" Classes.today="{Binding IsToday}">

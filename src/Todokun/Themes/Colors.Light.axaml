@@ -1,21 +1,26 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- 色は画面イメージ（docs/todokun-design.html 3 章）の目安。ライト -->
+    <!-- 色は画面イメージ（docs/todokun-design.html 3 章）の目安。ライト。面を 3 段（窓・左ペイン・入力欄）に分ける -->
     <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="WindowTextBrush" Color="#222222" />
+    <SolidColorBrush x:Key="WindowTextBrush" Color="#1F2328" />
     <SolidColorBrush x:Key="PaneBackgroundBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="SplitterBrush" Color="#E4E4E4" />
-    <SolidColorBrush x:Key="RuleBrush" Color="#CCCCCC" />
-    <SolidColorBrush x:Key="DimTextBrush" Color="#666666" />
-    <SolidColorBrush x:Key="OutsideTextBrush" Color="#C8C8C8" />
-    <SolidColorBrush x:Key="SundayBrush" Color="#BB3333" />
-    <SolidColorBrush x:Key="SaturdayBrush" Color="#0B63C5" />
-    <SolidColorBrush x:Key="DotBrush" Color="#0969DA" />
-    <SolidColorBrush x:Key="SelectedBackgroundBrush" Color="#E8F1FD" />
-    <SolidColorBrush x:Key="SelectedBorderBrush" Color="#0B63C5" />
-    <SolidColorBrush x:Key="SelectedTextBrush" Color="#0B63C5" />
-    <SolidColorBrush x:Key="BarBackgroundBrush" Color="#F7F7F7" />
-    <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#E3EEFB" />
-    <SolidColorBrush x:Key="WarnBackgroundBrush" Color="#FFF4C2" />
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#F6F7F9" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SplitterBrush" Color="#E6E8EC" />
+    <SolidColorBrush x:Key="RuleBrush" Color="#E3E5E9" />
+    <SolidColorBrush x:Key="DimTextBrush" Color="#6B7280" />
+    <SolidColorBrush x:Key="OutsideTextBrush" Color="#C4C8CF" />
+    <SolidColorBrush x:Key="SundayBrush" Color="#D14343" />
+    <SolidColorBrush x:Key="SaturdayBrush" Color="#2563C9" />
+    <SolidColorBrush x:Key="DotBrush" Color="#2F81F7" />
+    <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#ECEFF4" />
+    <SolidColorBrush x:Key="SelectedBackgroundBrush" Color="#E4EEFD" />
+    <SolidColorBrush x:Key="SelectedBorderBrush" Color="#2F81F7" />
+    <SolidColorBrush x:Key="SelectedTextBrush" Color="#1C5FD0" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#2F81F7" />
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BarBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#EEF0F4" />
+    <SolidColorBrush x:Key="WarnBackgroundBrush" Color="#FFF6D6" />
     <SolidColorBrush x:Key="WarnTextBrush" Color="#8A5A00" />
 </ResourceDictionary>
