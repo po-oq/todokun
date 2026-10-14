@@ -381,3 +381,13 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 - **閉じる**：`MainViewModel.CanCloseAsync` が TODO → メモの順に確認し、未保存の側のタブを先に見せる。
 - **画面**：`MainWindow` は「タブ行＋両方を載せたまま `IsVisible` で切り替える中身」。`NativeWebView` が 2 つ同時に生きる（Windows 実機の確認項目に追加済み）。
 - **決めたこと**：メモは保存後も編集に留まる（TODO と同じ。Miharikun のメモとは違う）／起動時は常に TODO タブ／外部変更の監視はしない／空で保存するとメモのファイルを削除（確認あり）。
+
+## 付録 B：ビューのチェックボックスのクリック切替（2026-10-14 追加）
+
+TODO・メモのビューで、チェックボックスをクリックして md の該当行を書き換えられるようにした。要件は 8.6 章。
+
+- **描画**：`TodoRenderer` が、段落の先頭がチェックボックスの `<li>` に md の行番号（`data-line`、0 始まり）を付ける。通常項目の下に入れ子になったチェックを、親の通常項目と取り違えない。ページの script はクリックで `invokeCSharpAction('toggle:<行>:<0|1>')` を送り、見た目はそのまま先に変える（楽観的更新）。
+- **受け口**：`PreviewCheckboxMessage.Parse`（`toggle:<行>:<0|1>` だけ）→ `TodoPreview.OnWebMessageReceived` → `IPreviewHost.OnCheckboxToggled` → `DocumentEditorSession.ToggleCheck`。
+- **書き換え**：ファイルを読み直し、`TaskToggle.Toggle`（Core の純粋関数。印の 1 文字だけ変える。CRLF・入れ子・引用・番号付き対応）で検証してから書く。表示した後に外で変わっていても、古い内容で上書きしない。
+- **成功**：`Content` を更新して `ContentUpdatedInPlace`（ページは作り直さない。次の描画のためにプレビューを持ち直すだけ）。**失敗**：理由を `Message` に出し、`ContentChanged(reload: true)` でページを作り直して見た目を戻す。
+- **決めたこと**：ビューのときだけ効く／Undo は無い／保存と同じく LF に統一して書く／読めない・無い・書けないは何も書かない。

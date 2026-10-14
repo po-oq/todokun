@@ -306,4 +306,13 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規</pre>
 <li><b>画面</b>：<code>MainWindow</code> は「タブ行＋両方を載せたまま <code>IsVisible</code> で切り替える中身」。<code>NativeWebView</code> が 2 つ同時に生きる（Windows 実機の確認項目に追加済み）。</li>
 <li><b>決めたこと</b>：メモは保存後も編集に留まる（TODO と同じ。Miharikun のメモとは違う）／起動時は常に TODO タブ／外部変更の監視はしない／空で保存するとメモのファイルを削除（確認あり）。</li>
 </ul>
+<h2>付録 B：ビューのチェックボックスのクリック切替（2026-10-14 追加）</h2>
+<p>TODO・メモのビューで、チェックボックスをクリックして md の該当行を書き換えられるようにした。要件は 8.6 章。</p>
+<ul>
+<li><b>描画</b>：<code>TodoRenderer</code> が、段落の先頭がチェックボックスの <code>&lt;li&gt;</code> に md の行番号（<code>data-line</code>、0 始まり）を付ける。通常項目の下に入れ子になったチェックを、親の通常項目と取り違えない。ページの script はクリックで <code>invokeCSharpAction('toggle:&lt;行&gt;:&lt;0|1&gt;')</code> を送り、見た目はそのまま先に変える（楽観的更新）。</li>
+<li><b>受け口</b>：<code>PreviewCheckboxMessage.Parse</code>（<code>toggle:&lt;行&gt;:&lt;0|1&gt;</code> だけ）→ <code>TodoPreview.OnWebMessageReceived</code> → <code>IPreviewHost.OnCheckboxToggled</code> → <code>DocumentEditorSession.ToggleCheck</code>。</li>
+<li><b>書き換え</b>：ファイルを読み直し、<code>TaskToggle.Toggle</code>（Core の純粋関数。印の 1 文字だけ変える。CRLF・入れ子・引用・番号付き対応）で検証してから書く。表示した後に外で変わっていても、古い内容で上書きしない。</li>
+<li><b>成功</b>：<code>Content</code> を更新して <code>ContentUpdatedInPlace</code>（ページは作り直さない。次の描画のためにプレビューを持ち直すだけ）。<b>失敗</b>：理由を <code>Message</code> に出し、<code>ContentChanged(reload: true)</code> でページを作り直して見た目を戻す。</li>
+<li><b>決めたこと</b>：ビューのときだけ効く／Undo は無い／保存と同じく LF に統一して書く／読めない・無い・書けないは何も書かない。</li>
+</ul>
 </body></html>
