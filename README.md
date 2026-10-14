@@ -88,6 +88,7 @@ dotnet run --project src/Todokun -- --data-dir /tmp/todokun-data   # 本物の�
 
 - 構成：`Todokun.Core`（読み書き・起動時コピー・編集補助。UI・Markdig を参照しない）／`Todokun.Docs`（Markdig のみ）／`Todokun.Presentation`（ViewModel。Avalonia を参照しない）／`Todokun`（画面）／`Todokun.Tests`／`Todokun.UiTests`（Avalonia.Headless）。
 - Windows 向けの exe：`pwsh scripts/publish.ps1`（self-contained・単一ファイル。出力は `artifacts/win-x64`）。mac 向けの配布物は作らない。
+- リリース：`v*` のタグを push すると GitHub Actions（`.github/workflows/release.yml`）が `todokun.exe` を zip にして Release に載せる（例：`git tag v0.1.0 && git push origin v0.1.0`）。Actions の手動実行はビルドの確認だけで、Release は作らない。テストは回さない。
 - Native AOT でのビルド（実験。配布物は上の `publish.ps1` のまま）：
 
   ```powershell

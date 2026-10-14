@@ -1,0 +1,52 @@
+name: release
+
+# v* のタグを push すると、Windows 向けの todokun.exe を作って GitHub Release に載せる。
+#   git tag v0.1.0 && git push origin v0.1.0
+# 手動実行（workflow_dispatch）はビルドだけ確認する（Release は作らず、成果物を Artifacts に残す）。
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish (win-x64, single file)
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v') } else { '0.0.0-dev' }
+          dotnet publish src/Todokun/Todokun.csproj -c Release -r win-x64 --self-contained `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:Version=$version -o artifacts/win-x64
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish に失敗しました" }
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          $name = "todokun-${env:GITHUB_REF_NAME}-win-x64.zip" -replace '[/\\]', '-'
+          Compress-Archive -Path artifacts/win-x64/todokun.exe -DestinationPath $name
+          "ASSET=$name" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Upload artifact (workflow_dispatch)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: todokun-win-x64
+          path: ${{ env.ASSET }}
+
+      - name: Create release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$env:GITHUB_REF_NAME" "$env:ASSET" --title "$env:GITHUB_REF_NAME" --generate-notes
