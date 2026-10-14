@@ -7,34 +7,38 @@ namespace Todokun.Presentation;
 /// 編集中なら <see cref="DayEditorSession"/> の確認を通ってから <see cref="DayCursor"/> を更新する。
 /// プレビュー（<see cref="IPreviewHost"/>）の持ち主でもある。
 /// </summary>
-public sealed class MainViewModel : IPreviewHost
+public sealed class MainViewModel : IDocumentPane
 {
     private readonly DayIndex _index;
     private readonly IUiServices _ui;
     private readonly Func<bool> _isDark;
-    private readonly Func<long> _nowMs;
-    private long _beganEditAt = long.MinValue;
+    private readonly ModEToggle _modE;
     private PreviewSource? _current;
+    private AppTab _selectedTab = AppTab.Todo;
 
     /// <summary>別の経路から同じキーが届いたとみなす間（ms）。P0：2 経路の遅れは 0.2〜0.5ms（最初の数回は 5〜34ms）。</summary>
-    public const long DoubleDeliveryWindowMs = 50;
+    public const long DoubleDeliveryWindowMs = ModEToggle.WindowMs;
 
     public MainViewModel(
         DayIndex index, DayStore store, DateOnly today, string dataRoot, bool isCustomDataRoot, IUiServices ui,
         string previewDir, Func<bool>? isDark = null, Func<DateOnly>? todayProvider = null,
         Func<(bool CanWrite, string? Reason)>? dataWritable = null, string? previewUnavailableReason = null,
-        string? startupNotice = null, Func<long>? nowMs = null)
+        string? startupNotice = null, Func<long>? nowMs = null, MemoStore? memoStore = null)
     {
         _index = index;
         _ui = ui;
         _isDark = isDark ?? (() => false);
-        _nowMs = nowMs ?? (() => Environment.TickCount64);
+        var now = nowMs ?? (() => Environment.TickCount64);
         PreviewDir = previewDir;
         PreviewUnavailableReason = previewUnavailableReason;
         LeftPane = new LeftPaneViewModel(index, today, todayProvider);
         Editor = new DayEditorSession(store, index, ui, dataWritable);
+        _modE = new ModEToggle(Editor, now);
         // 既定以外のデータルート（--data-dir 指定時）はタイトルバーに出す（要件 8.1）
         WindowTitle = isCustomDataRoot ? $"todokun — {dataRoot}" : "todokun";
+
+        var memoEditor = new MemoEditorSession(memoStore ?? new MemoStore(dataRoot), ui, dataWritable);
+        Memo = new MemoPaneViewModel(memoEditor, previewDir, _isDark, previewUnavailableReason, OpenLocalLink, now);
 
         Editor.ContentChanged += reload =>
         {
@@ -43,13 +47,53 @@ public sealed class MainViewModel : IPreviewHost
         };
         LeftPane.Cursor.OpenDayRequested += day => _ = OpenDayAsync(day);
         Editor.Open(today);
+        memoEditor.Load();
         // 起動時のお知らせ（コピー失敗・データルートに書けない）。次に日を開く・編集に入るまで出す
         if (startupNotice is not null) Editor.Message = startupNotice;
     }
 
     public LeftPaneViewModel LeftPane { get; }
     public DayEditorSession Editor { get; }
+    DocumentEditorSession IDocumentPane.Editor => Editor;
+    public MemoPaneViewModel Memo { get; }
     public string WindowTitle { get; }
+
+    /// <summary>いま見えているタブ（保存しない。起動時は常に TODO）。</summary>
+    public AppTab SelectedTab => _selectedTab;
+
+    public event Action<AppTab>? SelectedTabChanged;
+
+    public void SelectTab(AppTab tab)
+    {
+        if (_selectedTab == tab) return;
+        _selectedTab = tab;
+        SelectedTabChanged?.Invoke(tab);
+    }
+
+    /// <summary>どちらかの確認ダイアログが出ている。</summary>
+    public bool AnyConfirming => Editor.IsConfirming || Memo.Editor.IsConfirming;
+
+    /// <summary>どちらかに未保存の変更がある。</summary>
+    public bool AnyDirty => Editor.IsDirty || Memo.Editor.IsDirty;
+
+    /// <summary>
+    /// ウィンドウを閉じてよいか。TODO → メモの順に「保存しますか？」を出す（未保存の側のタブを先に見せる）。
+    /// どちらかがキャンセル・保存の失敗なら false。
+    /// </summary>
+    public async Task<bool> CanCloseAsync()
+    {
+        if (Editor.IsDirty)
+        {
+            SelectTab(AppTab.Todo);
+            if (!await Editor.CanCloseAsync()) return false;
+        }
+        if (Memo.Editor.IsDirty)
+        {
+            SelectTab(AppTab.Memo);
+            if (!await Memo.Editor.CanCloseAsync()) return false;
+        }
+        return true;
+    }
 
     /// <summary>日を開く：要求 → 確認 → 確定。キャンセルなら選択は変えない。</summary>
     public async Task<bool> OpenDayAsync(DateOnly day)
@@ -76,7 +120,11 @@ public sealed class MainViewModel : IPreviewHost
     public void Log(string message) => AppLog.Write(message);
 
     /// <summary>テーマが変わった：同じ内容を作り直す（スクロール位置は部品が保つ）。</summary>
-    public void OnThemeChanged() => PreviewChanged?.Invoke(CurrentPreview, true);
+    public void OnThemeChanged()
+    {
+        PreviewChanged?.Invoke(CurrentPreview, true);
+        Memo.OnThemeChanged();
+    }
 
     public void OpenLocalLink(string fullPath)
     {
@@ -98,7 +146,7 @@ public sealed class MainViewModel : IPreviewHost
         switch (key)
         {
             case PageKey.BeginEdit:
-                if (Editor.IsViewing && Editor.BeginEdit()) _beganEditAt = _nowMs();   // 冪等。ページにキーが届くのはビューモードのときだけ
+                _modE.OnPageBeginEdit();   // 冪等。ページにキーが届くのはビューモードのときだけ
                 break;
             case PageKey.ArrowLeft or PageKey.ArrowRight when Editor.IsViewing:
                 var cur = Editor.Day;
@@ -114,10 +162,12 @@ public sealed class MainViewModel : IPreviewHost
     /// </summary>
     public bool OnWindowKey(AppKey key, bool fromWebView)
     {
-        if (Editor.IsConfirming) return false;
+        var onMemo = SelectedTab == AppTab.Memo;
+        if ((onMemo ? Memo.Editor : (DocumentEditorSession)Editor).IsConfirming) return false;
         switch (key)
         {
             case AppKey.Left or AppKey.Right:
+                if (onMemo) return false;   // 日の移動は TODO タブだけ
                 // 編集モードの ←→ は TextBox に任せる。WebView にフォーカスがあるときはページ経路だけ（一本化の A）
                 if (!Editor.IsViewing || fromWebView) return false;
                 var cur = Editor.Day;
@@ -125,16 +175,8 @@ public sealed class MainViewModel : IPreviewHost
                 if (target is { } d) LeftPane.Cursor.RequestOpenDay(d);
                 return true;   // 端でも食う（一覧・ボタンのフォーカス移動に使わせない）
             case AppKey.ModE:
-                if (Editor.IsViewing)
-                {
-                    // ビューモードの Mod+E は常に「編集に入る」（冪等）。mac ではページに届かず、この経路だけが頼り（P0）
-                    if (Editor.BeginEdit()) _beganEditAt = _nowMs();
-                    return true;
-                }
-                // 編集中：ページ経路の BeginEdit の直後（同じ押下の二重到達）なら、戻さない
-                if (_nowMs() - _beganEditAt < DoubleDeliveryWindowMs) return true;
-                _ = Editor.LeaveEditAsync();
-                return true;
+                // 見えているタブだけに送る。ビューモードでは常に「編集に入る」（冪等。mac ではページに届かず、この経路だけが頼り：P0）
+                return onMemo ? Memo.OnModE() : _modE.OnModE();
         }
         return false;
     }
@@ -147,4 +189,11 @@ public enum AppKey
     Right,
     /// <summary>Ctrl+E（mac は Cmd+E）。</summary>
     ModE,
+}
+
+/// <summary>ウィンドウ上部のタブ。</summary>
+public enum AppTab
+{
+    Todo,
+    Memo,
 }
