@@ -191,7 +191,9 @@ public abstract partial class DocumentEditorSession : ObservableObject
         {
             try
             {
+                AppLog.Write($"保存: 書き込み開始 ({Draft.Length} 文字)");
                 StoreWrite(Draft);
+                AppLog.Write("保存: 書き込み完了");
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -203,7 +205,9 @@ public abstract partial class DocumentEditorSession : ObservableObject
             Base = Draft;
             Message = null;
             AfterWritten();
+            AppLog.Write("保存: 表示の更新へ");
             ContentChanged?.Invoke(true);
+            AppLog.Write("保存: 表示の更新を依頼した");
             return SaveResult.Saved;
         }
 

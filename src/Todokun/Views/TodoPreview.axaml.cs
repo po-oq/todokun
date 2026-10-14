@@ -84,6 +84,7 @@ public partial class TodoPreview : UserControl
                 return;
         }
 
+        _vm?.Log("プレビュー: 描画の開始");
         if (!EnsureWebView()) return;
         var md = (PreviewSource.Markdown)source;
 
@@ -114,15 +115,19 @@ public partial class TodoPreview : UserControl
         if (same && reload)
         {
             // Refresh() ではスクロール位置が保たれない（mac の WKWebView）ので、前に取っておいて読み込み後に戻す。
+            _vm?.Log("プレビュー: スクロール位置を取る");
             _restoreScrollY = PreviewNavigationPolicy.ParseScrollY(await web.InvokeScript("window.scrollY"));
             if (version != _version) return;
             _loadingPage = true;
+            _vm?.Log("プレビュー: Refresh");
             web.Refresh();
+            _vm?.Log("プレビュー: Refresh を呼んだ");
         }
         else
         {
             _restoreScrollY = null;   // 日を移るときは先頭から
             _loadingPage = true;
+            _vm?.Log("プレビュー: Navigate");
             web.Navigate(new Uri(TodoRenderer.FileUri(pagePath)));
         }
     }
