@@ -88,5 +88,16 @@ dotnet run --project src/Todokun -- --data-dir /tmp/todokun-data   # 本物の�
 
 - 構成：`Todokun.Core`（読み書き・起動時コピー・編集補助。UI・Markdig を参照しない）／`Todokun.Docs`（Markdig のみ）／`Todokun.Presentation`（ViewModel。Avalonia を参照しない）／`Todokun`（画面）／`Todokun.Tests`／`Todokun.UiTests`（Avalonia.Headless）。
 - Windows 向けの exe：`pwsh scripts/publish.ps1`（self-contained・単一ファイル。出力は `artifacts/win-x64`）。mac 向けの配布物は作らない。
+- Native AOT でのビルド（実験。配布物は上の `publish.ps1` のまま）：
+
+  ```powershell
+  dotnet publish src/Todokun/Todokun.csproj -c Release -r win-x64 -p:PublishAot=true -o artifacts/aot
+  ```
+
+  - 「C++ によるデスクトップ開発」ワークロード（MSVC リンカー）が要る。Visual Studio の「Developer PowerShell」から実行する。
+  - 普通の PowerShell だと、リンク時に `vswhere.exe` が見つからず失敗する。その場合は `C:\Program Files (x86)\Microsoft Visual Studio\Installer` を `PATH` に足す。
+  - バインドはコンパイル済み（`x:DataType`）にしてある。新しい `{Binding}` を足すときは、そのビューの `x:DataType`（`DataTemplate` なら自分の `x:DataType`）を忘れない。無いとビルドで失敗する。
+  - 確認済み：IL2026／IL3050 の警告は 0、起動・プレビューの描画（Windows）。未確認：メモタブ、編集・保存、チェックの切替。
+  - 出力に `*.pdb` が大きく付く（`libSkiaSharp.pdb` は約 80 MB）。配布するときは外す。
 - `poc/` は P0 の捨てる画面（確認の記録と Windows 実機の手順は [poc/README.md](poc/README.md)）。製品ではない。
 - 画面・キー・IME・WebView は Windows 実機での確認が完了条件（要件 15 章）。確認の状況は要件 13 章と計画の進捗を見る。
