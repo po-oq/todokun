@@ -25,7 +25,7 @@ P0 PoC ─▶ P1 Core ─▶ P2 編集補助 ─▶ P3 Docs ─▶ P4 左ペイ�
 4. 確かめるときは `--data-dir` で一時フォルダに向ける。本物のデータに触れない。
 
 ### 進捗（要件の旧 14 章の `[ ]` / `[x]` はここで管理する）
-- [ ] P0 PoC　- [ ] P1 Core　- [ ] P2 編集補助　- [ ] P3 Docs　- [ ] P4 左ペイン　- [ ] P5 右ペイン　- [ ] P6 キー・起動　- [ ] P7 仕上げ
+- [x] P0 PoC（mac 確認済み・Windows 実機は要件 13 章に保留）　- [x] P1 Core　- [x] P2 編集補助　- [x] P3 Docs　- [ ] P4 左ペイン（mac 完了・Windows 実機の確認待ち）　- [ ] P5 右ペイン（mac 完了・Windows 実機の確認待ち）　- [ ] P6 キー・起動（mac 完了・Windows 実機の確認待ち）　- [ ] P7 仕上げ（mac 完了・Windows 実機の確認待ち）
 
 ## 2. フェーズ P0：PoC（捨てる画面。要件 13 章）
 
@@ -35,6 +35,15 @@ P0 PoC ─▶ P1 Core ─▶ P2 編集補助 ─▶ P3 Docs ─▶ P4 左ペイ�
 | 0-2 | 結果の追記 | 13 章の各項目を `[x]` 確認済み／`[ ]` 保留にし、結果（数値・OS 別）を要件に追記。影響する仕様（カレンダーの作り方・Undo の方式・キー経路の一本化）を直す | 影響する仕様の章を直した |
 
 完了条件：13 章が「確認済み」または「保留」に整理されている。**P6-1（キー経路）と P2・P5-4（Undo の方式）は、ここの結果で中身が決まる**（11.5・11.6）。
+
+### P0 の結果（2026-10-14・macOS 26.6.2。詳細は要件 13 章。Windows 実機は未確認）
+- **←→ の二重到達は実際に起きる**（mac）：WebView にフォーカスがあるとき、ページが `preventDefault` しないと、ページ経路と Avalonia 経路の両方に届き 1 押下で 2 日飛ぶ。`preventDefault` すれば 1 回。→ 11.6 は **A**（`e.Source` が `NativeWebView` なら Avalonia 経路は捨てる）に決めた。判定は作れる（クリック後の `GetFocusedElement()` と `e.Source` は `NativeWebView`）。**C は使わない**（2 経路の遅れは最初の数回で 5〜34ms まであり、Windows のキーリピート約 33ms と区別できない）。
+- **mac の `Cmd+E` はページに届かず、Avalonia 経路に 1 回だけ届く**（`e.Source`=`NativeWebView`）。ページの `BeginEdit` は mac では使われないが害は無い（Windows は未確認）。
+- **Undo は範囲の置換（`SelectedText`）を使う**。`TextBox.Text` の全文置換は Undo 履歴が消えて戻らない。→ 11.5 を決めた。
+- **Markdig の名前は `UseSoftlineBreakAsHardlineBreak()`**（1.4.0 に `UseSoftlineBreakAsHardline` は無い）。→ 3-2・11.9・要件 9 章を直した。
+- 名前付き Mutex は mac で取れる（同じルートの 2 つ目は取れない・末尾の区切り違いは同名・別ルートは取れる）。
+- 自前の月グリッドが要件を満たす（点・今日の枠・選択の丸・前後月は押せない・最小幅に収まる）。標準 `Calendar` は試していない。→ **自前で決定**。
+- 確かめられなかった：**IME の変換中の Esc・Enter・Tab**（合成イベントでは変換が始まらない。実機で）、実キーボードのリピート間隔、`GridSplitter` のちらつき、Windows の全項目。手順は `poc/README.md`。
 
 ## 3. フェーズ P1：Core（画面なし。テスト先行）
 
@@ -66,7 +75,7 @@ P0 PoC ─▶ P1 Core ─▶ P2 編集補助 ─▶ P3 Docs ─▶ P4 左ペイ�
 | # | コミット | 内容 | テスト |
 |---|---|---|---|
 | 3-1 | `Todokun.Docs` の土台と CSS | プロジェクト・`Assets/markdown-base.css`・`markdown-light.css`・`markdown-dark.css` を Miharikun からコピー（mermaid・highlight.js・vendor は持ち込まない。csproj の `EmbeddedResource` も CSS だけ）。リソース名の文字列は `Todokun.Docs.Assets.<name>`（Miharikun の `"Miharikun.Docs.Assets."` を直す） | 埋め込みリソースが読める |
-| 3-2 | `TodoRenderer` | Miharikun の `MarkdownRenderer` を元に：Markdig パイプライン（`UseAutoIdentifiers(GitHub)`→`UseAdvancedExtensions`→`UseSoftlineBreakAsHardline`）、`ReadOnlyCheckboxes`、`NeutralizeHttpEquiv`、CSP＋nonce（script は全部 `<head>`）、`#見出し` のページ内移動、チェックボックスのクリック取り消し、`ScrollKeeperScript`、**キー転送スクリプト（11.6）**。`libFolder`・mermaid・hljs は無し。`RenderWithOutline`・`MarkdownOutline.cs`・`MarkdownRendering` は持ち込まない（`Render` の中で Parse→ToHtml を直接）。`EscapeListenerScript` はキー転送スクリプトに置き換える。`Render(markdown, baseFolder, isDark, isMac, title)` | 入れ子 2 段・3 段、`[x]` `[X]` `[ ]`、番号付き内、コードブロック内を変換しない、単一改行が `<br>`、`-[ ]`（スペース無し）は変換しない、`<meta http-equiv>`・`javascript:`・生 `<script>` が効かない、nonce は script だけ |
+| 3-2 | `TodoRenderer` | Miharikun の `MarkdownRenderer` を元に：Markdig パイプライン（`UseAutoIdentifiers(GitHub)`→`UseAdvancedExtensions`→`UseSoftlineBreakAsHardlineBreak`）、`ReadOnlyCheckboxes`、`NeutralizeHttpEquiv`、CSP＋nonce（script は全部 `<head>`）、`#見出し` のページ内移動、チェックボックスのクリック取り消し、`ScrollKeeperScript`、**キー転送スクリプト（11.6）**。`libFolder`・mermaid・hljs は無し。`RenderWithOutline`・`MarkdownOutline.cs`・`MarkdownRendering` は持ち込まない（`Render` の中で Parse→ToHtml を直接）。`EscapeListenerScript` はキー転送スクリプトに置き換える。`Render(markdown, baseFolder, isDark, isMac, title)` | 入れ子 2 段・3 段、`[x]` `[X]` `[ ]`、番号付き内、コードブロック内を変換しない、単一改行が `<br>`、`-[ ]`（スペース無し）は変換しない、`<meta http-equiv>`・`javascript:`・生 `<script>` が効かない、nonce は script だけ |
 | 3-3 | キー転送スクリプト | `key:ArrowLeft`・`key:ArrowRight`・`key:BeginEdit` を `invokeCSharpAction` で送る（**ページからは編集に入る知らせだけ**。ページにキーが届くのはビューモードのときだけなので。11.6）。`Mod+E` は `e.repeat` のとき送らない。`isMac` で `metaKey`／`ctrlKey` を切り替え。受け側の判定 `PreviewKeyMessage.Parse(body)`（`"key:…"` の引用符つきも受ける。他は null） | 3 種＋引用符つき＋不明な文字列＋空を捨てる、旧名 `key:ToggleEdit` も捨てる、スクリプトに `e.repeat` の判定が入っている |
 
 完了条件：`Todokun.Tests` の Docs が通る。出力 HTML に `mermaid`・`highlight` の文字が出ない。
@@ -132,7 +141,7 @@ src/Todokun.Presentation/
 ├─ DayEditorSession.cs                  5-1 新規：編集の状態の部品
 ├─ PreviewNavigationPolicy.cs・LocalLinkRule.cs  5-2 新規：Miharikun からコピー
 ├─ IPreviewHost.cs・PreviewSource.cs    5-2 新規：縮めた版（11.7）
-├─ Services/IUiServices.cs              5-1 新規：保存の 3 択・削除の確認・既定のアプリ・ファイラー・タイマー
+├─ Services/IUiServices.cs              5-1 新規：保存の 3 択・削除の確認・既定のアプリ・ファイラー（タイマーは使う所が無かったので持たない）
 └─ MainViewModel.cs                     5-1・6-2 新規：日の選択（要求→確認→確定）・モード・起動の結果・テーマ変更
 src/Todokun/
 ├─ Program.cs・App.axaml(.cs)           4-3・6-2 新規：組み立て
@@ -141,7 +150,7 @@ src/Todokun/
 ├─ Views/LeftPaneView.axaml(.cs)        4-3 新規
 ├─ Views/RightPaneView.axaml(.cs)       5-3・5-4 新規：Esc も
 ├─ Views/TodoPreview.axaml(.cs)         5-2 新規：MarkdownPreview の切り出し
-├─ Views/SaveChoiceDialog.axaml(.cs)    5-1 新規：保存／破棄／キャンセル（Miharikun の UnsavedMemoDialog に倣う）
+├─ Views/ChoiceDialog.axaml(.cs)    5-1 新規：保存／破棄／キャンセル（Miharikun の UnsavedMemoDialog に倣う）
 ├─ Services/AvaloniaUiServices.cs       5-1 新規：IUiServices の実装（ShellOpen を呼ぶ）
 ├─ PreviewFiles.cs・ShellOpen.cs        5-2 新規：Miharikun からコピー
 └─ Themes/Colors.*.axaml・AppStyles.axaml  4-3 新規：Miharikun から削ってコピー
@@ -162,8 +171,8 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 6. `DayIndex` を全走査（ルートが無い・フォルダでなければ空）→ **データルートが書けるときだけ** `StartupCopy.Run(today, index)`（`Copied` なら `index.Add(today)`）→ 今日を選択・ビューモード。書けないときはコピーを呼ばない（理由は「書けない」の 1 つだけ出す。コピー失敗と二重に出さない）。
 7. 背景で `PreviewFiles.CleanOld(cache/preview)`（1 日より古いものだけ。`lib/` は無いので直下のファイルだけ）。
 
-- 二重起動の確認は**名前付き Mutex だけ**（ロックファイルは使わない。データルートが書けないときも使えるため）。mac で取れない・例外になるときは、二重起動の確認を諦めて起動を続ける（ログに残す。mac は開発専用）。mac での動きは P0・P1-6 で確かめる（要確認）。
-- WebView2 の作業フォルダ（`cache/webview2`）は、`--data-dir` が違う 2 つのプロセスで共有される。同時に開いて問題ないか PoC（13 章の `cache/` 項目）で確かめる（要確認）。
+- 二重起動の確認は**名前付き Mutex だけ**（ロックファイルは使わない。データルートが書けないときも使えるため）。mac で取れない・例外になるときは、二重起動の確認を諦めて起動を続ける（ログに残す。mac は開発専用）。mac での動きは P0 で確認済み（取れる・同じルートの 2 つ目は取れない）。Windows は P1-6 で確かめる。
+- WebView2 の作業フォルダ（`cache/webview2`）は、`--data-dir` が違う 2 つのプロセスで共有される。同時に開いて問題ないかは Windows 実機で確かめる（P0 で未確認。要件 13 章の `cache/` 項目）。
 
 ### 11.2 起動時コピー（要件 7 章）
 | 今日のファイル | 今日より前の元 | 結果 |
@@ -213,7 +222,7 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 
 ### 11.5 編集補助の動き（P2。要件 10 章の補足）
 - 入力は `EditState`。改行は `\n`／`\r\n` を**そのまま保つ**（行の内容に `\r` を含めない。挿入する改行は、テキストにある改行に合わせ、無ければ `\n`）。
-- 出力は `EditResult(Start, Length, Replacement, Caret, SelStart, SelEnd)`＝**連続した 1 か所の置換**。`Apply(text)` で全文も得られる。画面は、PoC で Undo が自然に効く方（範囲の置換 `SelectedText`／全文の置換）を選ぶ。
+- 出力は `EditResult(Start, Length, Replacement, Caret, SelStart, SelEnd)`＝**連続した 1 か所の置換**。`Apply(text)` で全文も得られる。画面は**範囲の置換**（`SelectionStart`／`SelectionEnd` を合わせて `SelectedText` に代入）を使う。P0（mac）：全文の置換（`TextBox.Text =`）は Undo 履歴が消えて戻らず、範囲の置換は 1 操作ごとに Undo で戻る。
 
 | 操作 | 条件 | 結果 |
 |---|---|---|
@@ -231,7 +240,7 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 | Enter | チェック項目でない行 | 通常の改行（null） |
 
 - `*`・`+` のリストは描画ではチェックボックスになるが、編集補助の対象にしない（`- ` だけ。要件 10 章）。
-- IME：変換中・確定の Enter は項目を続行しない。受けるのは「IME に処理されなかった Enter」だけ。IME 中に届くキーの種類（`Key.ImeProcessed` かどうか）は PoC の記録に従う（**要確認**）。
+- IME：変換中・確定の Enter は項目を続行しない。受けるのは「IME に処理されなかった Enter」だけ。Avalonia は IME 経由のキーを `Key.ImeProcessed` で届ける（P0・mac で確認。物理キーは `PhysicalKey` に残る）ので、`e.Key == Key.ImeProcessed` のキーは扱わない。**変換中の Enter・Tab・Esc が `ImeProcessed` で届くかは、実機の IME で未確認**（P0 では合成イベントで変換が始まらなかった。P5-4 の完了条件）。
 
 ### 11.6 キーの経路（P6-1）
 - ページ→アプリ：`TodoRenderer` が `<head>` に入れるスクリプトが、`keydown` で次を `invokeCSharpAction` に送る。`e.defaultPrevented` なら送らない。
@@ -240,12 +249,13 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
   - ページにキーが届くのは**ビューモードのときだけ**（編集中は WebView が隠れる）。だからページからは「編集に入る」だけを送る。**切り替え（トグル）を送らない理由**：1 回の押下がページ経路と Avalonia 経路の両方から届くと、トグルは「編集に入ってすぐ戻る」。`BeginEdit` は冪等なので、二重に届いても 2 回目は何もしない。
   - `isMac` は C# が描画時にスクリプトへ埋め込む。
 - アプリ側の受け：`PreviewKeyMessage.Parse`（Windows は `"key:…"` と引用符つきで来ることがある。**3 種以外は捨てる**）。`Dispatcher.UIThread.Post` で VM へ。VM は `Mode==View` かつ確認中でないときだけ受ける。
-- ウィンドウの `KeyDown` は **Tunnel**（ListBox・ボタン・カレンダーが矢印キーを先に食わないように）。ビューモードのときだけ ←→（修飾キーなし）を日の移動に使う。`Mod+E` は View なら編集へ、Edit ならビューに戻る（11.4）。編集モードの ←→ は `TextBox` に任せる。IME に処理されたキー（PoC の記録による。`Key.ImeProcessed` など）は扱わない。
+- ウィンドウの `KeyDown` は **Tunnel**（ListBox・ボタン・カレンダーが矢印キーを先に食わないように）。ビューモードのときだけ ←→（修飾キーなし）を日の移動に使う。`Mod+E` は View なら編集へ、Edit ならビューに戻る（11.4。mac では WebView にフォーカスがあってもこの経路に届く：`e.Source` は `NativeWebView`）。編集モードの ←→ は `TextBox` に任せる。IME に処理されたキー（`Key.ImeProcessed`）は扱わない。
 - **`Esc` は Tunnel で扱わない**。`RightPaneView` の `TextBox` の KeyDown（Bubble・`!e.Handled`・IME に処理されたキーでない）で「ビューに戻る」（11.4）。IME の変換を取り消す Esc で編集を抜けないため。ビューモードの Esc は何もしない（ページでも受けない）。
-- 1 回の押下がアプリに 2 回届く可能性（Windows は未確認。Miharikun の Esc は冪等で気づけない）。`BeginEdit` 化で Mod+E は害が無くなり、残るのは ←→。PoC の結果で、次のどれかにする：
-  - A：WebView にフォーカスがあるときはページ経路だけ、ないときは Avalonia 経路だけ。判定は PoC で記録した `FocusManager.GetFocusedElement()`／`e.Source` が `NativeWebView` になるかで決める（なれば「Tunnel は `e.Source` が `NativeWebView` なら捨てる」）。
-  - C（A の判定が作れないとき）：重複除去。同じ種類の要求が**違う経路から**閾値（キーリピートの間隔より短く。PoC で測る。目安 30ms）以内に来たら、2 つ目を捨てる。同じ経路からの連続（長押し）は捨てない。
-  - B：二重に来ないなら、両方を受けるだけ。
+- 1 回の押下がアプリに 2 回届く：**P0（mac）で起きることを確認した**。WebView にフォーカスがあるとき、ページが `preventDefault` しないと ←→ が両経路に届き、1 押下で 2 日飛ぶ（`preventDefault` すれば 1 回）。**決定は A**：
+  - **←→**：Tunnel の受け口は、`e.Source` が `NativeWebView`（または `FocusManager.GetFocusedElement()` が `NativeWebView`）なら捨てる。WebView にフォーカスがあるときはページ経路だけ、ないとき（カレンダー・一覧・フォーカスなし）は Avalonia 経路だけ。ページ側の `preventDefault` も残す（二重の防御）。判定が作れることは P0 で確認済み（クリック後の `GetFocusedElement()`・KeyDown の `e.Source` はともに `NativeWebView`。ファーストレスポンダーは `ManagedWKWebView`）。
+  - **Mod+E**：`e.Source` が `NativeWebView` の Avalonia 経路は**捨てずに「編集に入る」（`BeginEdit`）として扱う**。mac ではページの keydown に届かず、この経路だけが頼り（P0）。ビューモードの Mod+E は常に `BeginEdit`（冪等）なので、ページ経路と二重に届いても害は無い。トグル（編集→ビュー）として扱うのは、WebView が隠れる編集モードのときだけ。編集に入った直後（50ms 以内）の Mod+E は、同じ押下の二重到達とみなして戻さない（P6-1 の実装。`MainViewModel.DoubleDeliveryWindowMs`）。
+  - C（重複除去）は使わない：P0 で 2 経路の遅れは 0.2〜0.5ms（最初の数回は 5〜34ms）で、Windows のキーリピート（最速で約 33ms）と閾値で区別できない。
+  - Windows は未確認。WebView2 が ←→ をページにだけ渡すか・両方に渡すかを実機で確かめ、上の A が成り立つか見る（P6-1 の完了条件）。
 - 長押し：移動の要求は毎回 `SelectedDay` を更新するだけで軽い。描画は `TodoPreview` の世代番号（`_version`）で最後の 1 つだけが残る。
 
 ### 11.7 `MarkdownPreview` → `TodoPreview` の切り出し（P5-2）
@@ -264,12 +274,12 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 - 読むときの UTF-8 は**厳密**（`throwOnInvalidBytes: true`）。既定のデコーダーは不正なバイトを黙って U+FFFD に置き換えるので、Shift_JIS などのファイルを開いて保存・起動時コピーすると元の文字が戻らない。`DecoderFallbackException` は「読めない」（`Failed`）にする。
 - 一時ファイルは `<day>.md.<guid>.tmp`（日ファイルと同じフォルダ）。`DayFile.TryParse` に一致しないので無視される（消さない）。失敗時に残る `~RF*.TMP` は `AtomicFile` が掃除する。
 - 日付は `DateTime.Now`（ローカル時間）。日付の文字は `yyyy-MM-dd`（`CultureInfo.InvariantCulture`）。
-- `TextBox.Text` の改行が `\n` か `\r\n` かは **要確認**（保存は LF に統一するので影響しないが、11.5 の関数は両方に対応する）。
+- `TextBox.Text` の改行：mac では入力の改行は `\n`（`TextBox.NewLine`=`\n`）で、セットした `\r\n` はそのまま読み戻る。Windows は **未確認**（`\r\n` かもしれない。保存は LF に統一するので影響しないが、11.5 の関数は両方に対応する）。
 
 ### 11.9 Markdig と描画
-- パイプラインは `UseAutoIdentifiers(AutoIdentifierOptions.GitHub)` → `UseAdvancedExtensions()` → `UseSoftlineBreakAsHardline()`。順序を変えない（`UseAutoIdentifiers` は `UseAdvancedExtensions` より前）。
+- パイプラインは `UseAutoIdentifiers(AutoIdentifierOptions.GitHub)` → `UseAdvancedExtensions()` → `UseSoftlineBreakAsHardlineBreak()`（P0 で確認：`UseSoftlineBreakAsHardline` は Markdig 1.4.0 に無い）。順序を変えない（`UseAutoIdentifiers` は `UseAdvancedExtensions` より前）。
 - 入れ子のチェックリストは、Miharikun.Docs で実測済み（2 スペース・3 段・タブ・空行つき）。番号付きの下に 2 スペースの `-` を書くと別のリストになる（要件 9 章のとおり対象外）。
-- 通常項目が混ざったリストの黒丸と ☐ の位置揃えは、PoC で目視する（CSS の調整が要るかもしれない）。
+- 通常項目が混ざったリストの黒丸と ☐ の位置揃え：P0（mac・WKWebView）で目視した。通常の `-` 項目の本文は、☐ 項目の本文より約 10pt 左から始まる（黒丸の幅の分）。読みづらくはない。揃えるなら P3 で CSS（`.task-list-item` の左余白）を調整する（任意）。
 
 ### 11.10 Miharikun からのコピー（コピー元 → コピー先 → 変える所）
 パスは Miharikun の `src/` から（確かめた版：`9a305a6`）。名前は実在を確かめてから使う。
@@ -286,8 +296,8 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 | `Miharikun.Presentation/Services/IUiServices.cs`・`IUiTimer.cs` | `Todokun.Presentation/Services/`（5-1） | `AskSaveAsync`・`ConfirmDeleteAsync` を新設。クリップボードは持ち込まない |
 | `Miharikun/Views/MarkdownPreview.axaml(.cs)` | `Todokun/Views/TodoPreview.axaml(.cs)`（5-2） | 11.7 の表 |
 | `Miharikun/PreviewFiles.cs`・`Miharikun.Presentation/ShellOpen.cs` | `Todokun/`（5-2） | 名前空間だけ（`ShellOpen` はアプリ側に置く） |
-| `Miharikun/Services/AvaloniaUiServices.cs` | `Todokun/Services/`（5-1） | 新設のダイアログ（`SaveChoiceDialog`・削除の確認）・`OpenDialogs` の数え方 |
-| `Miharikun/Views/UnsavedMemoDialog.axaml(.cs)` | `Todokun/Views/SaveChoiceDialog.axaml(.cs)`（5-1） | 文言（保存しますか？［保存］［破棄］［キャンセル］） |
+| `Miharikun/Services/AvaloniaUiServices.cs` | `Todokun/Services/`（5-1） | 新設のダイアログ（`ChoiceDialog`・削除の確認）・`OpenDialogs` の数え方 |
+| `Miharikun/Views/UnsavedMemoDialog.axaml(.cs)` | `Todokun/Views/ChoiceDialog.axaml(.cs)`（5-1） | 文言（保存しますか？［保存］［破棄］［キャンセル］） |
 | `Miharikun/ThemeService.cs` | `Todokun/ThemeService.cs`（4-3） | 設定の保存（`AppSettingsStore`・`Set`）を除く。常に OS 追従 |
 | `Miharikun/Themes/Colors.*.axaml`・`AppStyles.axaml` | `Todokun/Themes/`（4-3） | 使うスタイルだけに削る |
 | `Miharikun/MainWindow.axaml.cs` の `OnClosing`・確認の流れ | `Todokun/MainWindow.axaml.cs`（6-3） | メモ・タブの部分を除き、`DayEditorSession` の確認へ |
@@ -296,12 +306,12 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 
 | リスク | 対策 |
 |---|---|
-| ←→ が 1 押下で 2 回届き、2 日飛ぶ（Windows 未確認） | PoC で経路別に回数を数える。二重なら 11.6 の A（経路を一本化）、判定が作れなければ C（重複除去）。長押しの確認も |
+| ←→ が 1 押下で 2 回届き、2 日飛ぶ（mac で再現。Windows 未確認） | 11.6 の A（`e.Source` が `NativeWebView` なら Avalonia 経路は捨てる）＋ページの `preventDefault`。P6-1 の Windows 実機で確かめる。長押しも |
 | Mod+E が 2 回届き、編集に入ってすぐ戻る | ページからは `key:BeginEdit`（冪等）だけ送る。`e.repeat` は送らない（11.6） |
 | 読めない・UTF-8 でない日を編集して保存し、元を上書きして失う | `DayContent.Failed` の日は編集に入れない。UTF-8 は厳密に読む（11.4・11.8） |
 | IME 変換中の Esc で編集を抜ける | Esc は Tunnel で扱わず、`TextBox` の Bubble で IME に処理されたキーを除いて受ける。P5-4 の実機確認 |
-| `Cmd+E` を WKWebView が検索に使う（mac） | ページで `preventDefault`。効かなければ「✎ 編集」ボタンで代替（開発用なので許容） |
-| `TextBox` の Tab・Ctrl+Enter が先に食われる／Undo が壊れる | Tunnel で受ける。Undo は範囲の置換に切り替えられる形（`EditResult`）で作る |
+| `Cmd+E` を WKWebView が検索に使う（mac） | P0：`Cmd+E` はページに届かず Avalonia 経路で受かる（WebKit の検索に取られない）。ページの `preventDefault` は残す。「✎ 編集」ボタンでも代替できる |
+| `TextBox` の Tab・Ctrl+Enter が先に食われる／Undo が壊れる | Tunnel で受ける。Undo は範囲の置換（P0 で確認：全文置換は Undo が効かない）で作る（`EditResult`） |
 | IME の変換確定の Enter で項目が増える | 「IME に処理されなかった Enter」だけ受ける。PoC で Windows・mac を確かめる。P5-4 の完了条件にする |
 | exe 隣が書込不可（`cache/`・`data/`） | `ProbeWritable` で先に判定。`cache/` は WebView を諦めて案内、`data/` は閲覧のみ（11.1） |
 | 同期フォルダ配下で `File.Replace` が失敗 | `AtomicFile` の再試行。失敗は理由を出して編集のまま。PoC で確かめる |
@@ -318,11 +328,11 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 3. 空にして保存したら、その日のファイルを削除する。削除前に確認ダイアログを出す。
 4. 保存したあとは編集モードに留まる。
 5. 前後の月の日（グリッドの端の日）は押せない。
-6. 単一の改行は改行として表示する（`UseSoftlineBreakAsHardline`）。
+6. 単一の改行は改行として表示する（`UseSoftlineBreakAsHardlineBreak`）。
 7. 画面イメージから、カーソル行のハイライトと一覧の「今日」タグを外す。
-8. ←→ の二重到達は、PoC で数えて決める。
+8. ←→ の二重到達は、PoC で数えて決める。→ P0（mac）で実際に起きると確認。A で一本化する（11.6）。
 9. ページからの切り替えの知らせは `key:BeginEdit`（編集に入るだけ）にする（計画レビュー Q1。要件 11 章も直した）。
-10. 二重到達の一本化は、フォーカスで判定できれば A、できなければ重複除去 C（計画レビュー Q2）。
+10. 二重到達の一本化は、フォーカスで判定できれば A、できなければ重複除去 C（計画レビュー Q2）。→ P0 で判定が作れたので **A**。C は閾値が取れず使わない。
 11. 二重起動の確認は名前付き Mutex だけ（ロックファイルは使わない。計画レビュー Q3）。
 
 ### 計画で決めたこと（仕様にない細部。違えば言ってください）

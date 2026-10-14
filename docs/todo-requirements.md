@@ -142,7 +142,7 @@
 ## 9. Markdownのレンダリング（確定）
 
 - Markdig（`UseAdvancedExtensions`）で HTML にして、`NativeWebView` で表示する。見た目は一般的なMarkdown（見出し・箇条書き・番号付きリスト・コードブロック・表・リンク・引用）
-- **単一の改行は改行として表示する**（確定。Markdig の `UseSoftlineBreakAsHardline`）。`UseAdvancedExtensions` には含まれないので、パイプラインに足す
+- **単一の改行は改行として表示する**（確定。Markdig の `UseSoftlineBreakAsHardlineBreak()`。1.4.0 に `UseSoftlineBreakAsHardline` は無い。P0 で確認）。`UseAdvancedExtensions` には含まれないので、パイプラインに足す
 - **チェックボックスは必須**：`- [ ]` `- [x]` `- [X]` をチェックボックス（☐ / ☑）として表示する。入れ子（多段）・番号付きリスト内も対象。コードブロック内の `[x]` は変換しない
   - Miharikun と同じく、読み取り専用（クリックしても変わらない）で、リストの黒丸は消す（MVP）
 - **ネストは2スペースの字下げ**（利用者の書き方）。`- ` で始まるリストなら、2スペースの字下げで入れ子になる（CommonMark）。番号付きリスト（`1.`）の入れ子は3スペース必要だが、利用者は `-` を使うので、MVPでは対応しない。入れ子のフィクスチャでテストする（13章）
@@ -179,9 +179,9 @@
 - 修飾キーは `PlatformSettings.HotkeyConfiguration.CommandModifiers` で OS 別に切り替える（Miharikun のメモの保存と同じ）
 - **左右キーの移動**：現在の日の前後にある、ファイルがある日へ移る。端（これ以上前後が無い）では何もしない。現在の日がファイルの無い日（カレンダーで選んだ空の日、起動時に何も無い今日）でも、その日を基準に前後のファイルがある日へ飛ぶ。月をまたいだら、左ペインのカレンダー・一覧もその月に切り替わる
 - **左右キーは、ビューモードのときだけ効く**。編集モードではテキストのカーソル移動に使われる。カレンダー・一覧にフォーカスがあっても、ビューモードなら日の移動として効かせる（それらの部品がキーを先に食わないように、ウィンドウ全体で先に受ける。要検証）
-- **WebView にフォーカスがあると、macではアプリにキーが届かない**（Miharikun の知見。Windows でも同じ作りで受けるのが安全）。ページ側の `keydown` で `ArrowLeft` `ArrowRight` と、**切り替え `Ctrl/Cmd+E`**（Windows は `ctrlKey`、mac は `metaKey`。本文をクリックした後は常にこの状態なので必須）を受け、`invokeCSharpAction` でアプリへ知らせる。知らせは決まった文字列（`key:ArrowLeft`・`key:ArrowRight`・`key:BeginEdit`）だけを受け、他は捨てる（Miharikun の `key:Escape` と同じ作り）。ページにキーが届くのはビューモードのときだけなので、`Ctrl/Cmd+E` はページからは「編集に入る」（`key:BeginEdit`。冪等）として送る。切り替え（トグル）として送ると、二重に届いたときに編集に入ってすぐ戻るため（計画レビュー Q1）。押し続け（`e.repeat`）は送らない。ビューモードでは `Esc` は使わないので、ページ側では受けない
+- **WebView にフォーカスがあると、アプリ側（Avalonia）にキーが届かないことがある**（Miharikun の知見。P0（mac）：←→ はページに届き、ページが `preventDefault` しないと Avalonia 側にも届く。`Cmd+E` はページに届かず Avalonia 側に届く。Windows は未確認なので、同じ作りで両方受けるのが安全）。ページ側の `keydown` で `ArrowLeft` `ArrowRight` と、**切り替え `Ctrl/Cmd+E`**（Windows は `ctrlKey`、mac は `metaKey`。本文をクリックした後は常にこの状態なので必須）を受け、`invokeCSharpAction` でアプリへ知らせる。知らせは決まった文字列（`key:ArrowLeft`・`key:ArrowRight`・`key:BeginEdit`）だけを受け、他は捨てる（Miharikun の `key:Escape` と同じ作り）。ページにキーが届くのはビューモードのときだけなので、`Ctrl/Cmd+E` はページからは「編集に入る」（`key:BeginEdit`。冪等）として送る。切り替え（トグル）として送ると、二重に届いたときに編集に入ってすぐ戻るため（計画レビュー Q1）。押し続け（`e.repeat`）は送らない。ビューモードでは `Esc` は使わないので、ページ側では受けない
 - **Miharikun の受け口は Esc 専用**（`MarkdownRenderer.EscapeListenerScript` は const、`PreviewScripts.IsEscapeMessage` は `key:Escape` だけ）。左右・切り替えを受けるよう一般化する
-- **1回のキー押下が、アプリに「ちょうど1回」届くこと**（確定。13章で数える）。Miharikun の Esc は冪等（戻すだけ）なので、二重に届いても気づけなかった。←→ は冪等でないので、二重に届くと2日飛ぶ。二重なら、WebView にフォーカスがあるときはページ経路のみ、ないときは Avalonia 経路のみ、に一本化する
+- **1回のキー押下が、アプリに「ちょうど1回」届くこと**（確定。13章で数える）。Miharikun の Esc は冪等（戻すだけ）なので、二重に届いても気づけなかった。←→ は冪等でないので、二重に届くと2日飛ぶ。二重なら、WebView にフォーカスがあるときはページ経路のみ、ないときは Avalonia 経路のみ、に一本化する。**P0（mac）で二重到達を確認した**（ページが `preventDefault` しない場合の ←→）。←→ は上の一本化で扱い、`Mod+E` は「編集に入る」として受ける（冪等。計画 11.6）
 - ウィンドウ全体の受け口は **Tunnel**（`RoutingStrategies.Tunnel`）。Miharikun の既存の受け口は Bubble（Esc だけ）なので先例にならない。長押し（キーリピート）で連続して日を移ってもよいが、描画は最後の1つだけが残ること
 
 ## 12. 非機能要件
@@ -192,23 +192,87 @@
 - 例外で落ちないこと。捕まえられなかった例外は、ログ（`data/` の外、`<exe>/cache/logs/app.log`。3章）にスタックつきで残す。**ログにTODOの本文は書かない**
 - 本物のデータに触れずに試すときは `--data-dir` で一時フォルダに向ける
 
-## 13. Step 0：PoC・実機確認（要検証）
+## 13. Step 0：PoC・実機確認（P0）
 
-実装の最初に、捨てる小さな画面で次を確かめ、結果をこのファイルに追記する（`[x]` 確認済み／`[ ]` 未確認）。
+2026-10-14 に P0 を実施した（`poc/` の捨てる画面。コミットしない。手順・記録は `poc/README.md`）。環境：**macOS 26.6.2（arm64）・.NET 10.0.5・Avalonia 12.1.3・Avalonia.Controls.WebView 12.1.0（mac は WKWebView）**。
 
-- [ ] `NativeWebView` で、入れ子のチェックボックス（2スペース字下げの多段、3段以上）が見た目どおりに出るか（HTML 構造は Miharikun.Docs で確認済み。通常項目が混ざったリストの黒丸・☐の位置揃えを目視）
-- [ ] **ページ側の `keydown`（`ArrowLeft`/`ArrowRight`/`Ctrl+E`・`Cmd+E`）が、1回の押下で `invokeCSharpAction` にちょうど1回届くか**（Windows と mac。カウンタで数える。二重なら11章の一本化）。mac の `Cmd+E`（WebKit の検索への選択範囲）を `preventDefault` で止められるか
-- [ ] ビューモードで、フォーカスがカレンダー・一覧・WebView のどこにあっても、左右キーで日が移れるか（Tunnel の受け口）。日を移ったあと（`Navigate` 後）も WebView のフォーカスが残り、次のキーが届くか。長押しで連続して移ってもよいか
-- [ ] `Environment.ProcessPath` のフォルダが、`PublishSingleFile` の exe を PATH 経由で起動したときも exe のある場所を指すか（Miharikun が同じ作りで実績あり。Windows 実機で軽く確認）。そこに `data/`・`cache/` を作れるか
-- [ ] 自前の月グリッド（第一候補）が、「ファイルがある日の点」「今日・選択中の丸」「前後月の日は押せない」を満たせるか。標準の `Calendar` でも同じ見た目にできるなら、どちらにするかを決める
-- [ ] `GridSplitter` で左右の幅を変えられるか。最小幅（カレンダーが収まる幅）が効くか。mac で右ペインの `NativeWebView` が幅の変更中にちらつかないか（Miharikun の `DocumentsView` に先例あり）
-- [ ] `TextBox` で `Tab` `Shift+Tab` `Ctrl/Cmd+Enter` `Enter` を横取りできるか（`AcceptsTab`・Tunnel。Miharikun のメモは `AcceptsTab=False` で先例なし）。`Ctrl/Cmd+Enter` が改行を混入させないか。書き換えても Undo が自然に効くか（効かなければ `TextBox.Text` の全置換ではなく選択範囲の置換にする）
-- [ ] **IME**：日本語変換中・確定直後の `Enter`（チェック項目が増えない）、変換中の `Tab`（字下げが入らない）。Windows 実機・mac。IME 中に届くキーの種類（`Key.ImeProcessed` かどうか）を記録
-- [ ] 日ファイルの保存（`AtomicFile`：一時ファイル → `File.Replace`）が、`data/` を OneDrive などの同期フォルダ配下に置いたときも失敗しないか（Windows）。WebView は md を開かない（一時HTMLを開く）ので、WebView・エディタが開いたままの書き込みは問題にならない
-- [ ] `cache/`（WebView2 の作業フォルダ・一時HTML・ログ）が exe 隣に作られ、書き込めないフォルダでは WebView を諦めて案内が出て、編集・保存は使えるか。exe 隣が書込不可のときの Mutex・`data/` の扱いも
-- [ ] Windows 11 の標準環境に WebView2 Runtime が入っているか（未導入の案内は Miharikun の `IsEngineAvailable` を流用）
-- [ ] ライト/ダークの切り替えで、ビュー（WebView）が再描画されるか
-- [ ] 単一ファイル自己完結の exe の起動時間（初回の自己展開を含む。3秒以内か）
+- 凡例：`[x]` ＝確認済み、`[ ]` ＝未確認／保留。**Windows 11 の確認は `[ ]` のまま残す**（15 章：mac だけで OK にしない）。Windows の手順は `poc/README.md` の「Windows 実機の確認手順」
+- mac のキー入力は、OS 全体への注入（`CGEventPost`・`osascript`）がアクセシビリティ権限の都合で使えなかったため、**アプリ内から本物の `NSEvent` を `[NSApp sendEvent:]` に流して**確かめた（ウィンドウ → ファーストレスポンダー `ManagedWKWebView` → Avalonia の `AvnView`。HID 層は通らない）。実キーボードでの手確認は残る（`poc/README.md`）
+- 画面は自己スクリーンショット（自プロセスのウィンドウ）で目視した
+
+### 13.1 確認結果
+
+- [x] **（mac）入れ子のチェックボックス**：`NativeWebView`（WKWebView）で、2 スペース字下げの 2〜5 段（ひ孫まで）・番号付きの中・通常項目の下のチェックが、☐／☑ で見た目どおりに出る。コードブロック内の `[x]` は変換されず、単一の改行は改行で出る。所見：通常の `-` 項目と混在するリストで、通常項目の本文は ☐ 項目の本文より約 10pt 左から始まる（黒丸の幅の分。読みづらくはない。揃えるなら CSS で調整）
+  - [ ] （Windows・WebView2）同じ確認
+- [x] **（mac）キー到達の回数**（ページ経路／Avalonia 経路を別々に数えた）：
+  - WebView にフォーカス、←→ 各 1 押下：ページが `preventDefault` する場合 **ページ経路 1・Avalonia 経路 0（ちょうど 1 回）**。長押し 26 押下では 26 回（二重なし）
+  - ページが `preventDefault` **しない**場合：**ページ経路 1・Avalonia 経路 1（二重に届く）**。←1 押下で 2 日飛び、長押し 26 押下では各経路 26 回ずつ。→ **一本化が要る（計画 11.6 の A に決定）**
+  - 2 経路の到達の遅れは 0.2〜0.5ms（最初の数回は 5〜34ms）
+  - `Cmd+E`：WebView にフォーカスがあっても**ページの keydown には届かず**、Avalonia 経路に 1 回だけ届く（`e.Source` は `NativeWebView`。key equivalent をウィンドウが先に処理するため）。編集中の `Cmd+E` も 1 回。ページに届かないので、WebKit の検索への取り込みは起きない（`preventDefault` の効きは未確認）
+  - [ ] （Windows）←→・`Ctrl+E` を、ページ経路と Avalonia 経路を別々に数える。`preventDefault` あり・なしの両方
+- [x] **（mac）フォーカスと左右キー**：
+  - フォーカスがカレンダーのボタン・一覧・なし・WebView のどれでも、ビューモードの ←→ で 1 日ずつ移れる（WebView 以外はウィンドウの Tunnel で受ける。WebView はページ経路）
+  - WebView をクリックした後：`FocusManager.GetFocusedElement()` ＝ `NativeWebView`、ファーストレスポンダー ＝ `ManagedWKWebView`。KeyDown の `e.Source` ＝ `NativeWebView`（`Cmd+E`）。→ 計画 11.6 の A の判定は作れる
+  - 日を移った（`Navigate`）後も WebView のフォーカスは残り（`document.hasFocus()` が true・Avalonia のフォーカスは `NativeWebView`）、次のキーが届く。長押し（約 33ms 間隔・26 回）で連続して移り、最後の日が表示された
+  - 編集に入ると Avalonia のフォーカスは `TextBox`。編集中の ← は `TextBox` のカーソル移動になり、日は動かない。編集からビューに戻ると、フォーカスは null（WebView には戻らない。次のキーは Tunnel 経路で届く）
+  - キーリピートの間隔：**実キーボードでは測れていない**（上の長押しは合成。33ms は私が与えた値）。参考（一般的な値で、この環境では実測していない）：mac の既定は 90ms・開始遅延 375ms、Windows の最速は約 33ms
+  - [ ] （Windows）同じ確認。長押しで連続して移っても最後の日が表示されるか。WebView をクリックした後の `GetFocusedElement()`・`e.Source`
+- [x] **（mac）`Environment.ProcessPath`**：`PublishSingleFile`（osx-arm64・self-contained・約 111MB）を、PATH 上のシンボリックリンク経由で別フォルダから起動 → `ProcessPath`・`AppContext.BaseDirectory` とも実体の exe のフォルダ（シンボリックリンクは解決される）
+  - [ ] （Windows）PATH 経由で起動して exe のフォルダを指すか。そこに `data/`・`cache/` を作れるか
+- [x] **（mac）月グリッド**：自前の 7×6 で、土青・日赤、ファイルがある日の点、今日の枠（オレンジ）、選択の丸、前後月の日は Button にしない（押せない・フォーカスも来ない）を満たす。幅 252pt の左ペインに収まる。標準 `Calendar` は試していない（第一候補が満たしたため）。→ **自前で決定**
+- [x] **（mac）`GridSplitter`**：ドラッグで左ペインの幅が変わる（300→517pt）。`ColumnDefinition.MinWidth`（252）が効く（20 までドラッグしても 252）。
+  - [ ] （mac）幅の変更中の WebView のちらつき（目視が要る）
+  - [ ] （Windows）同じ確認とちらつき
+- [x] **（mac）`TextBox` のキーの横取り**：ウィンドウではなく `TextBox` の Tunnel で `e.Handled=true` にすれば、`Tab`（`AcceptsTab=False` でもフォーカスは動かない）・`Cmd+Enter`（改行は入らない）・`Enter` を横取りできる。`Shift+Tab` は同じ経路（`KeyModifiers.Shift`）で、個別には未確認。素の `Esc` は `TextBox` の Bubble（`!e.Handled`・`ImeProcessed` でない）で受かり、編集を抜ける。
+  - **Undo**：`SelectionStart`/`SelectionEnd` を合わせて `SelectedText` に代入（範囲の置換）は、1 操作ごとに Undo で戻る（字下げ 2 回→Undo 2 回で元）。**`TextBox.Text` の全文置換は Undo 履歴が消え、Undo が効かない**。→ **範囲の置換を使う**（計画 11.5）
+  - `TextBox.Text` の改行：mac では Enter で入る改行は `\n`（`NewLine`=`\n`）。セットした `\r\n` はそのまま読み戻る
+  - [ ] （Windows）同じ確認。Undo が 1 操作で戻るか。Enter の改行が `\r\n` か
+- [ ] **IME**：日本語変換中・確定直後の `Enter`（チェック項目が増えない）、変換中の `Tab`（字下げが入らない）、変換中の `Esc`（編集を抜けない）。**mac・Windows とも未確認**
+  - mac で試したが、合成イベントでは IME の変換が始まらなかった（日本語入力ソースを選んでも、キーは `Key.ImeProcessed` ＋ `TextInput "a"` として届き、未確定文字列にならない）。確認できたのは、Avalonia が IME 経由のキーを `Key.ImeProcessed`（物理キーは `PhysicalKey` に残る）で届けること。変換中の `Enter`・`Tab`・`Esc` が `ImeProcessed` で届くかは、実際の IME 入力で確かめる必要がある
+  - 実機の手順は `poc/README.md`（PoC の `TextBox` が、届いた Key・`ImeProcessed` かどうかを記録する）
+- [ ] **日ファイルの保存（`AtomicFile`）が同期フォルダ（OneDrive など）配下で失敗しないか**（Windows のみ。未確認）
+- [ ] **`cache/`**：書き込めないフォルダで WebView を諦めて案内が出るか・編集と保存が使えるか、exe 隣が書込不可のときの Mutex・`data/` の扱い（Windows。mac では PoC に諦めの経路を作っていない）
+  - mac：書込不可フォルダは `Permission denied`（Unix 権限）で、書込判定（`ProbeWritable`）は例外で判別できる
+  - `--data-dir` が違う 2 つのプロセスで `cache/webview2` を共有して問題ないか（Windows のみ。未確認）
+- [x] **（mac）名前付き Mutex**（計画 0-1 の追加項目）：`System.Threading.Mutex` が使える。同じデータルートの 2 つ目は取れない・末尾の区切りの有無で同名・別ルートは取れる・解放後は取れる。例外なし。
+  - [ ] （Windows）同じ確認（低リスク）
+- [ ] **Windows 11 の標準環境に WebView2 Runtime が入っているか**（Windows のみ。未確認。案内は Miharikun の `IsEngineAvailable` を流用）
+- [x] **（mac）ライト/ダーク**：`ActualThemeVariantChanged` でビューが再描画され（背景 `rgb(30,30,30)`）、スクロール位置（400）が保たれる（`window.scrollY` を取って `Refresh()` し、読み込み後に戻す）。ダーク→ライトも同じ
+  - [ ] （Windows）同じ確認
+- [x] **（mac）単一ファイルの exe の起動時間**：osx-arm64・self-contained・`PublishSingleFile`（約 111MB）で、起動から WebView の最初のページの読み込み完了まで約 1.4 秒（1.37 秒・1.39 秒）。
+  - [ ] （Windows）初回の自己展開を含めて 3 秒以内か
+
+### 13.2 P0 で見つかったこと（仕様・計画への反映）
+
+| 見つかったこと | 反映先 |
+|---|---|
+| ←→ が WebView にフォーカスがあるとき両経路に届く（ページの `preventDefault` が無いと） | 計画 11.6：**A に決定**（`e.Source` が `NativeWebView` なら Avalonia 経路は捨てる）。C は使わない（遅れ 5〜34ms が Windows のキーリピート約 33ms と区別できない）。要件 11 章に追記 |
+| mac の `Cmd+E` はページに届かず Avalonia 経路で届く | 計画 11.6：`e.Source` が `NativeWebView` の Avalonia 経路の `Mod+E` を捨てずに `BeginEdit` として扱う。要件 11 章に追記 |
+| `TextBox.Text` の全文置換で Undo が効かない | 計画 11.5：範囲の置換（`SelectedText`）に決定 |
+| `UseSoftlineBreakAsHardline` が Markdig 1.4.0 に無い | 要件 9 章・計画 3-2・11.9：`UseSoftlineBreakAsHardlineBreak()` |
+| IME はこの環境の合成入力では確認できない | 計画 11.5・P5-4：`Key.ImeProcessed` を除く方針のまま。実機の確認は P5-4 の完了条件 |
+
+### 13.3 実装後の状況（P7 時点・2026-10-14）
+
+P0〜P7 を mac（macOS 26.6.2・arm64）で実装・確認した。**Windows 11 実機での確認はすべて未実施**で、`poc/README.md` の手順と、下の一覧が残る。
+
+- mac で確認した非機能（12 章）：
+  - 365 ファイル＋壊れたファイル（UTF-8 でない）＋形に合わない名前のファイルで、起動の準備（全走査・起動時コピー）は 3 秒を大きく下回る（`Todokun.Tests` の `NonFunctionalTests`）。壊れた日だけが「読めない」になり、他の日は使える。認識しないファイルは消さない・書き換えない。
+  - 単一ファイル（osx-arm64・self-contained・365 ファイル）で、プロセスの開始からウィンドウが出るまで：初回（自己展開あり）2.2 秒、2 回目 0.7 秒（`cache/logs/app.log` の「起動: …」）。
+  - ログに TODO の本文を書かない（テスト済み）。
+- **Windows 実機で残る確認**（15 章の完了条件）：
+  - [ ] ←→ が 1 押下で 1 日だけ移る（ページ経路／Avalonia 経路の二重到達の有無。`preventDefault` あり・なし）。長押しで連続して移っても最後の日が表示される
+  - [ ] WebView で `Ctrl+E` を押して編集に入り、そのまま戻らない（二重到達の保険は 50ms。`MainViewModel.DoubleDeliveryWindowMs`）
+  - [ ] IME：変換確定の `Enter` で項目が増えない・変換中の `Tab` で字下げされない・変換中の `Esc` で編集を抜けない（`Key.ImeProcessed` で届くか）
+  - [ ] Undo が 1 操作で戻る・Enter で入る改行が `\r\n` か
+  - [ ] WebView2 Runtime（標準の Windows 11 に入っているか・未導入の案内）
+  - [ ] `PublishSingleFile` の exe を PATH 経由で起動したとき `Environment.ProcessPath` が exe の場所を指し、`data/`・`cache/` を作れる。書込不可のフォルダでの案内
+  - [ ] 起動 3 秒以内（初回の自己展開を含む）
+  - [ ] 同期フォルダ（OneDrive など）配下の `data/` で、保存（一時ファイル → `File.Replace`）が失敗しない
+  - [ ] `--data-dir` が違う 2 つの起動で `cache/webview2` を共有して問題ない
+  - [ ] `GridSplitter` の操作中に WebView がちらつかない（mac も目視が要る）
+  - [ ] ライト/ダークの切り替えでビューが再描画される・スクロール位置が保たれる
+  - [ ] 2 つ目の起動の案内・Alt+F4／閉じるボタンでの未保存の確認
 
 ## 14. 実装計画
 
