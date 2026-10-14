@@ -368,3 +368,16 @@ scripts/publish.ps1・README.md・.gitignore   7-1 新規
 - P3 の後と P5 の後は、利用者が望めばレビューを挟む（差分と品質ゲートの結果を渡す）。
 
 **状態：レビュー反映済み**（`docs/todokun-plan-review.html` の #1〜#20 と Q1〜Q3 を推奨どおり反映）。
+
+---
+
+## 付録 A：メモタブ（2026-10-14 追加）
+
+上部に「TODO」「メモ」のタブを置き、メモタブでアプリ全体で 1 つのメモ（`data/memo.md`）を、TODO の右ペインと同じ操作で編集できるようにした。要件は 8.5 章。設計書は `docs/superpowers/specs/2026-10-14-memo-tab-design.md`、実装の手順は `docs/superpowers/plans/2026-10-14-memo-tab.md`。
+
+- **共通化**：`DayEditorSession` の状態機械を基底 `DocumentEditorSession` に抜き出し、`DayEditorSession`（日）と `MemoEditorSession`（メモ）は保存先と表示文だけを持つ。`RightPaneView` は `DocumentPaneView`（`DataContext` は `IDocumentPane`）に一般化。
+- **保存**：`MemoStore`（`Utf8TextFile` を `DayStore` と共有）。`memo.md` は `DayFile.TryParse`（3 階層）に一致しないので日の走査に混ざらない。
+- **キー**：`ModEToggle`（Ctrl+E の「入る／戻る」と 50ms の二重到達の抑止）を TODO・メモで共有。`MainViewModel.SelectedTab` が見えているタブを持ち、`←→`・`Ctrl+E` は見えているタブにだけ送る。
+- **閉じる**：`MainViewModel.CanCloseAsync` が TODO → メモの順に確認し、未保存の側のタブを先に見せる。
+- **画面**：`MainWindow` は「タブ行＋両方を載せたまま `IsVisible` で切り替える中身」。`NativeWebView` が 2 つ同時に生きる（Windows 実機の確認項目に追加済み）。
+- **決めたこと**：メモは保存後も編集に留まる（TODO と同じ。Miharikun のメモとは違う）／起動時は常に TODO タブ／外部変更の監視はしない／空で保存するとメモのファイルを削除（確認あり）。
