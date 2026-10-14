@@ -15,16 +15,21 @@ public sealed class FakeUiServices : IUiServices
     /// <summary>設定すると、ダイアログが出ている間（答える前）に呼ばれる。</summary>
     public Action? WhileAsking { get; set; }
 
-    public Task<SaveChoice> AskSaveAsync()
+    public string? LastAskSaveMessage { get; private set; }
+    public string? LastConfirmDeleteMessage { get; private set; }
+
+    public Task<SaveChoice> AskSaveAsync(string message)
     {
         AskSaveCount++;
+        LastAskSaveMessage = message;
         WhileAsking?.Invoke();
         return Task.FromResult(SaveAnswer);
     }
 
-    public Task<bool> ConfirmDeleteAsync()
+    public Task<bool> ConfirmDeleteAsync(string message)
     {
         ConfirmDeleteCount++;
+        LastConfirmDeleteMessage = message;
         WhileAsking?.Invoke();
         return Task.FromResult(DeleteAnswer);
     }
