@@ -1,4 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <Content Include="todokun-window.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Todokun.Core\Todokun.Core.csproj" />
@@ -20,11 +24,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>todokun</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>Todokun</RootNamespace>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SatelliteResourceLanguages>ja;en</SatelliteResourceLanguages>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <ApplicationIcon>todokun-window.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>
