@@ -1,5 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Todokun.Presentation"
+             x:DataType="vm:LeftPaneViewModel"
              x:Class="Todokun.Views.LeftPaneView">
     <!-- 上：カレンダー（固定の大きさ）。下：その月の一覧（残りの高さ。長いときは一覧だけスクロール）。
          境界のドラッグはしない（要件 8.1）。カレンダーは自前の 7×6 のボタン（P0 で決定。要件 8.2） -->
@@ -26,7 +28,7 @@
                 <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="vm:CalendarCell">
                     <Grid Height="38" MinWidth="36">
                         <Button Classes="day" IsVisible="{Binding InCurrentMonth}" Command="{Binding OpenCommand}">
                             <Grid>
@@ -51,7 +53,7 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="DayItems" ItemsSource="{Binding List.Items}" Margin="6,0,6,6">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="vm:DayListItem">
                             <Button Classes="listitem" Classes.selected="{Binding IsSelected}" Command="{Binding OpenCommand}"
                                     Content="{Binding Text}" />
                         </DataTemplate>
