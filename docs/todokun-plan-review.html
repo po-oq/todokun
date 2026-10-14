@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>todokun 実装計画 レビュー</title>
+<style>
+body{font-family:"Yu Gothic UI",sans-serif;max-width:1000px;margin:20px auto;padding:0 16px;line-height:1.65;color:#222}
+h1{font-size:22px} h2{font-size:17px;border-left:5px solid #2b6cb0;padding-left:8px;margin-top:32px} h3{font-size:15px;margin:16px 0 4px}
+table{border-collapse:collapse;margin:8px 0;width:100%} td,th{border:1px solid #bbb;padding:4px 8px;font-size:13.5px;vertical-align:top} th{background:#eef;text-align:left}
+code{background:#f0f0f0;padding:0 4px} pre{background:#f6f6f6;border:1px solid #ccc;padding:10px;font-size:12.5px;line-height:1.5;overflow:auto}
+.q{background:#fff6dd;border:1px solid #e0c060;padding:6px 14px;margin:8px 0} .rec{color:#c05000;font-weight:bold} .ok{color:#2a7a2a;font-weight:bold} .ng{color:#b33;font-weight:bold}
+.sync{background:#e8f4ff;border:1px solid #9bc;padding:6px 14px;margin:10px 0}
+svg{background:#fafafa;border:1px solid #ccc;max-width:100%}
+</style></head><body>
+<h1>todokun 実装計画（todokun-plan.md）レビュー</h1>
+<p><b>結論：<span class="ng">直してから進める</span></b>。計画の骨格（フェーズ分け・Core のテスト先行・Miharikun からコピーして削る方針）はそのままでよい。ただし <b>データを失う経路が 1 つ（#1）</b>、<b>起動順序の矛盾（#3）</b>、<b>Mod+E の二重到達（#4）</b>は P1・P5・P6 に入る前に計画を直す。ほかは表の行を足す程度。</p>
+<p>読み方：<code>plan.md:N</code> は <code>docs/todokun-plan.md</code> の行、<code>要件:N</code> は <code>docs/todo-requirements.md</code> の行、ほかの <code>file:line</code> は Miharikun（commit <code>9a305a6</code>）の <code>src/</code> からのパス。「要確認」は実機・PoC で確かめていない推測。</p>
+
+<h2>1. 確認した範囲</h2>
+<ul>
+<li>todokun：<code>docs/todokun-plan.md</code>（全章）、<code>docs/todokun-plan.html</code>（11.1・11.2・11.4・11.6・11.7 が md と同じ内容であることを確認）、<code>docs/todo-requirements.md</code>（全章）、<code>docs/todokun-design.html</code></li>
+<li>Miharikun：<code>Miharikun.Docs/MarkdownRenderer.cs</code>・<code>MarkdownOutline.cs</code>・<code>Miharikun.Docs.csproj</code>・<code>Assets/markdown-base.css</code>、<code>Miharikun/Views/MarkdownPreview.axaml(.cs)</code>・<code>MemoView.axaml(.cs)</code>・<code>DocumentsView.axaml.cs</code>、<code>Miharikun/MainWindow.axaml.cs</code>・<code>App.axaml.cs</code>・<code>ThemeService.cs</code>・<code>PreviewFiles.cs</code>・<code>AppComposition.cs</code>（テーマ部分）、<code>Miharikun.Presentation/PreviewNavigationPolicy.cs</code>・<code>LocalLinkRule.cs</code>・<code>PreviewScripts.cs</code>・<code>ShellOpen.cs</code>・<code>AppLog.cs</code>・<code>Services/IUiServices.cs</code>・<code>ViewModels/IPreviewHost.cs</code>・<code>ViewModels/MemoViewModel.cs</code>、<code>Miharikun.Core/Storage/AtomicFile.cs</code>・<code>AppPaths.cs</code>・<code>Memo/MemoEditor.cs</code>、<code>tests/Miharikun.UiTests/MarkdownPreviewTests.cs</code></li>
+</ul>
+
+<h2>2. 概念図（問題の箇所に赤）</h2>
+<h3>2-1. キーの経路（11.6）</h3>
+<svg viewBox="0 0 960 340" width="960" font-size="13" font-family="sans-serif">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#333"/></marker></defs>
+<rect x="10" y="118" width="120" height="56" fill="#ffe9c8" stroke="#a70"/>
+<text x="20" y="140" font-weight="bold">キー押下</text><text x="20" y="160" font-size="12">←→ / Mod+E / Esc</text>
+<rect x="170" y="30" width="200" height="56" fill="#dfd" stroke="#383"/>
+<text x="180" y="52" font-weight="bold">ページの keydown</text><text x="180" y="72" font-size="12">head の script（nonce つき）</text>
+<rect x="410" y="30" width="230" height="56" fill="#dff" stroke="#08a"/>
+<text x="420" y="52" font-weight="bold">OnWebMessageReceived</text><text x="420" y="72" font-size="12">PreviewKeyMessage.Parse → Post</text>
+<rect x="170" y="200" width="200" height="56" fill="#dfd" stroke="#383"/>
+<text x="180" y="222" font-weight="bold">Window の Tunnel</text><text x="180" y="242" font-size="12">Avalonia にフォーカス</text>
+<rect x="410" y="200" width="230" height="56" fill="#fde" stroke="#b33"/>
+<text x="420" y="222" font-weight="bold">一本化 A の判定</text><text x="420" y="242" font-size="12">WebView にフォーカス？ ← #6</text>
+<rect x="680" y="104" width="270" height="86" fill="#fde" stroke="#b33"/>
+<text x="690" y="126" font-weight="bold">VM：日の移動・ToggleEdit</text>
+<text x="690" y="146" font-size="12">二重に届くと ToggleEdit が</text>
+<text x="690" y="164" font-size="12">編集→ビューへ戻ってしまう ← #4</text>
+<rect x="170" y="280" width="470" height="44" fill="#fde" stroke="#b33" stroke-dasharray="5,3"/>
+<text x="180" y="300" font-weight="bold">編集中の Esc（TextBox・IME 変換中）</text><text x="180" y="316" font-size="12">11.6 に経路が無い ← #5</text>
+<line x1="130" y1="134" x2="170" y2="62" stroke="#333" marker-end="url(#a)"/>
+<text x="92" y="92" font-size="11" fill="#555">WebView に</text><text x="92" y="105" font-size="11" fill="#555">フォーカス</text>
+<line x1="130" y1="160" x2="170" y2="226" stroke="#333" marker-end="url(#a)"/>
+<line x1="370" y1="58" x2="410" y2="58" stroke="#333" marker-end="url(#a)"/>
+<line x1="370" y1="228" x2="410" y2="228" stroke="#333" marker-end="url(#a)"/>
+<line x1="640" y1="58" x2="680" y2="124" stroke="#333" marker-end="url(#a)"/>
+<line x1="640" y1="228" x2="680" y2="172" stroke="#333" marker-end="url(#a)"/>
+<line x1="70" y1="174" x2="170" y2="300" stroke="#b33" stroke-dasharray="5,3" marker-end="url(#a)"/>
+</svg>
+
+<h3>2-2. 起動順序（11.1・6-2）：計画 → 直した形</h3>
+<svg viewBox="0 0 960 250" width="960" font-size="12" font-family="sans-serif">
+<text x="10" y="18" font-weight="bold" font-size="13">計画（plan.md:154-158）</text>
+<rect x="10" y="28" width="120" height="50" fill="#fde" stroke="#b33"/><text x="18" y="48" font-weight="bold">SingleInstance</text><text x="18" y="66">ルートが未確定 #3</text>
+<rect x="145" y="28" width="120" height="50" fill="#dff" stroke="#08a"/><text x="153" y="48" font-weight="bold">LaunchOptions</text><text x="153" y="66">→ AppPaths</text>
+<rect x="280" y="28" width="120" height="50" fill="#dff" stroke="#08a"/><text x="288" y="48" font-weight="bold">Probe(cache)</text>
+<rect x="415" y="28" width="120" height="50" fill="#dff" stroke="#08a"/><text x="423" y="48" font-weight="bold">Probe(data)</text>
+<rect x="550" y="28" width="120" height="50" fill="#fde" stroke="#b33"/><text x="558" y="48" font-weight="bold">DayIndex 全走査</text><text x="558" y="66">無い／ファイル #12</text>
+<rect x="685" y="28" width="120" height="50" fill="#fde" stroke="#b33"/><text x="693" y="48" font-weight="bold">StartupCopy</text><text x="693" y="66">Index 未更新 #11</text>
+<rect x="820" y="28" width="130" height="50" fill="#efe" stroke="#383"/><text x="828" y="48" font-weight="bold">今日を選択</text><text x="828" y="66">ビューモード</text>
+<line x1="130" y1="53" x2="145" y2="53" stroke="#333" marker-end="url(#a)"/><line x1="265" y1="53" x2="280" y2="53" stroke="#333" marker-end="url(#a)"/>
+<line x1="400" y1="53" x2="415" y2="53" stroke="#333" marker-end="url(#a)"/><line x1="535" y1="53" x2="550" y2="53" stroke="#333" marker-end="url(#a)"/>
+<line x1="670" y1="53" x2="685" y2="53" stroke="#333" marker-end="url(#a)"/><line x1="805" y1="53" x2="820" y2="53" stroke="#333" marker-end="url(#a)"/>
+<text x="10" y="118" font-weight="bold" font-size="13">直した形</text>
+<rect x="10" y="128" width="120" height="50" fill="#dff" stroke="#08a"/><text x="18" y="148" font-weight="bold">LaunchOptions</text><text x="18" y="166">→ AppPaths</text>
+<rect x="145" y="128" width="120" height="50" fill="#dfd" stroke="#383"/><text x="153" y="148" font-weight="bold">AppLog.Init</text><text x="153" y="166">(CacheRoot)</text>
+<rect x="280" y="128" width="120" height="50" fill="#dfd" stroke="#383"/><text x="288" y="148" font-weight="bold">SingleInstance</text><text x="288" y="166">DataRoot で名前</text>
+<rect x="415" y="128" width="120" height="50" fill="#dff" stroke="#08a"/><text x="423" y="148" font-weight="bold">Probe(cache)</text><text x="423" y="166">Probe(data)</text>
+<rect x="550" y="128" width="120" height="50" fill="#dfd" stroke="#383"/><text x="558" y="148" font-weight="bold">DayIndex</text><text x="558" y="166">無ければ空で開始</text>
+<rect x="685" y="128" width="120" height="50" fill="#dfd" stroke="#383"/><text x="693" y="148" font-weight="bold">StartupCopy</text><text x="693" y="166">data 書ける時だけ</text>
+<rect x="820" y="128" width="130" height="50" fill="#dfd" stroke="#383"/><text x="828" y="148" font-weight="bold">Index.Add(今日)</text><text x="828" y="166">→ 今日を選択</text>
+<line x1="130" y1="153" x2="145" y2="153" stroke="#383" stroke-width="2" marker-end="url(#a)"/><line x1="265" y1="153" x2="280" y2="153" stroke="#383" stroke-width="2" marker-end="url(#a)"/>
+<line x1="400" y1="153" x2="415" y2="153" stroke="#383" stroke-width="2" marker-end="url(#a)"/><line x1="535" y1="153" x2="550" y2="153" stroke="#383" stroke-width="2" marker-end="url(#a)"/>
+<line x1="670" y1="153" x2="685" y2="153" stroke="#383" stroke-width="2" marker-end="url(#a)"/><line x1="805" y1="153" x2="820" y2="153" stroke="#383" stroke-width="2" marker-end="url(#a)"/>
+<text x="10" y="210" fill="#c05000">※ 2 つ目の起動の案内は Avalonia の起動後に出す（ダイアログには UI が要る）。SingleInstance で負けたら、案内を出してから Shutdown。</text>
+<text x="10" y="230" fill="#c05000">※ data が書けないときは StartupCopy を呼ばない（「書けない」の理由を 1 つだけ出す。コピー失敗と二重に出さない）。</text>
+</svg>
+
+<h3>2-3. 日を開いたときの中身（11.4）：「読めない」を「ファイルなし」と混ぜない</h3>
+<svg viewBox="0 0 960 230" width="960" font-size="13" font-family="sans-serif">
+<rect x="10" y="80" width="150" height="56" fill="#ffe9c8" stroke="#a70"/><text x="20" y="102" font-weight="bold">日を開く</text><text x="20" y="122" font-size="12">DayStore.Read</text>
+<rect x="220" y="10" width="250" height="56" fill="#dff" stroke="#08a"/><text x="230" y="32" font-weight="bold">Missing（ファイルなし）</text><text x="230" y="52" font-size="12">案内文。編集→保存で作る</text>
+<rect x="220" y="80" width="250" height="56" fill="#dff" stroke="#08a"/><text x="230" y="102" font-weight="bold">Loaded(text)</text><text x="230" y="122" font-size="12">ビュー表示。編集・保存・空で削除</text>
+<rect x="220" y="150" width="250" height="66" fill="#dfd" stroke="#383"/><text x="230" y="172" font-weight="bold">Failed(理由) ← 新規 #1・#2</text><text x="230" y="192" font-size="12">読めない・UTF-8 でない</text><text x="230" y="208" font-size="12">理由を表示。編集に入れない</text>
+<rect x="530" y="150" width="420" height="66" fill="#fde" stroke="#b33"/><text x="540" y="172" font-weight="bold">計画のまま：Saved=null（＝ファイルなし扱い）</text>
+<text x="540" y="192" font-size="12">編集へ → Base=Draft="" → 書いて保存 → 読めなかった</text><text x="540" y="208" font-size="12">元のファイルを上書き（データ消失）</text>
+<line x1="160" y1="100" x2="220" y2="40" stroke="#333" marker-end="url(#a)"/>
+<line x1="160" y1="108" x2="220" y2="108" stroke="#333" marker-end="url(#a)"/>
+<line x1="160" y1="118" x2="220" y2="180" stroke="#333" marker-end="url(#a)"/>
+<line x1="470" y1="183" x2="530" y2="183" stroke="#b33" stroke-dasharray="5,3" marker-end="url(#a)"/>
+<text x="476" y="176" font-size="11" fill="#b33">いまは</text>
+</svg>
+
+<h2>3. 問題一覧</h2>
+<p>観点：①11.7 の切り出し ②11.6 のキー経路 ③11.1・11.2 起動 ④11.4 状態 ⑤データを失わないか。重大度：<span class="ng">高</span>＝直さないと進めない／中＝該当フェーズの前に直す／低＝表に足す程度。</p>
+<table>
+<tr><th>#</th><th>観点</th><th>重大度</th><th>何が問題か（根拠）</th><th>どう解決するか</th></tr>
+
+<tr><td>1</td><td>⑤④</td><td class="ng">高</td><td><b>読めない日を編集すると、空から書いて元のファイルを上書きする。</b>11.4 は <code>Saved</code>（null＝ファイルなし）で「読めない」を表せず、「編集へ」は <code>Base=Draft=Saved ?? ""</code>（plan.md:184・188・189）。読めなかった日でも編集に入り、保存すると読めなかった元を <code>DayStore.Write</code> で置き換える。Miharikun は同じ事故を防ぐため「読めていなければ編集させない」を持っている（<code>Miharikun.Presentation/ViewModels/MemoViewModel.cs:33</code>・<code>:142-143</code>）。要件 12 章「その日だけエラー表示」（要件:190）とも合わない。</td><td>日の中身を 3 状態にする：<code>Missing</code>／<code>Loaded(text)</code>／<code>Failed(reason)</code>（図 2-3）。<code>Failed</code> は理由を出し、「✎ 編集」無効・<code>Mod+E</code> 無視・空保存の削除もしない。11.4 の表に「日を開く（読めない）」「編集へ（読めない日）→ 何もしない（理由を出す）」の行を足し、5-1 のテストに入れる。</td></tr>
+
+<tr><td>2</td><td>⑤</td><td>中</td><td><b>UTF-8 として正しくないファイルを黙って読み替え、保存・起動時コピーで壊れた内容を書く。</b>1-3 の <code>Read</code> は「UTF-8・BOM 許容」だけ（plan.md:45）。.NET の既定の UTF-8 デコーダーは不正なバイトを U+FFFD に置き換えて例外にしない。Shift_JIS などで書かれた日を開く→編集→保存すると、元の文字は戻らない。起動時コピー（11.2）でも、化けた内容が今日のファイルになる。</td><td><code>new UTF8Encoding(false, throwOnInvalidBytes: true)</code> で読み、<code>DecoderFallbackException</code> を「読めない」（#1 の <code>Failed</code>）にする。StartupCopy はその元を「読めない元」として飛ばす。1-3 のテストに「UTF-8 でないファイル」を足す。</td></tr>
+
+<tr><td>3</td><td>③</td><td class="ng">高</td><td><b>11.1 の起動順序が自分の決めごとと矛盾している。</b>手順 1 が <code>SingleInstance</code>、手順 2 が <code>LaunchOptions → AppPaths</code>（plan.md:154-155。6-2 も同じ順：plan.md:100）。ところが Mutex の名前は「データルートのフルパスの SHA-256」（plan.md:48）なので、AppPaths より前には作れない。</td><td>順序を <code>LaunchOptions → AppPaths → AppLog.Init(CacheRoot) → SingleInstance → ProbeWritable(cache/data) → DayIndex → StartupCopy</code> に直す（図 2-2）。11.1 と 6-2 の両方、md と html の両方。</td></tr>
+
+<tr><td>4</td><td>②</td><td class="ng">高</td><td><b>Mod+E は切り替え（トグル）なので、二重に届くと「編集に入ってすぐビューに戻る」。</b>11.6 とリスク表は ←→ の二重だけを扱っている（plan.md:230・261、決定事項 8：plan.md:282）。要件も ←→ の例だけ（要件:184）。ページ経路が <code>key:ToggleEdit</code> を Post し、Avalonia 経路も同じ押下を受けると、2 回目で戻る。どちらが先に来ても結果は同じ。押し続けたとき（キーリピート）も切り替えが繰り返される。</td><td>ページに届くのはビューモードのときだけ（編集中は WebView が隠れる）なので、ページからは <b><code>key:BeginEdit</code>（冪等）</b>だけを送る。Avalonia 経路は「View なら BeginEdit／Edit なら ExitEdit」。こうすると二重に届いても、片方は何もしない。ページの script は <code>e.repeat</code> のとき送らない。PoC（要件 13 章）では Mod+E の回数も数える（←→ と並べて）。Q1 を参照。</td></tr>
+
+<tr><td>5</td><td>②</td><td>中</td><td><b>編集中の Esc の経路が 11.6 に無い。</b>Esc でビューに戻るのは 11.4 にある（plan.md:194）、要件にもある（要件:173）が、11.6（plan.md:224-233）・6-1・5-3 のどこにも受け口が書かれていない。Miharikun の Esc はウィンドウの <b>Bubble</b> で <code>!e.Handled</code> のときだけ（<code>Miharikun/Views/DocumentsView.axaml.cs:30</code>・<code>:141</code>）。11.6 の Tunnel で Esc を受けると、IME の変換を取り消す Esc で編集を抜けてしまうおそれがある（要確認）。</td><td>11.6 に「Esc：<code>RightPaneView</code> の TextBox で KeyDown（Bubble・<code>!e.Handled</code>・<code>Key.ImeProcessed</code> でない）→ ExitEdit」を足す。Window の Tunnel では Esc を扱わない。P5-4 の実機確認に「IME 変換中の Esc で編集を抜けない」を足す。同じ理由で、Tunnel の Mod+E も IME 変換中は扱わない（PoC の記録に従う）。</td></tr>
+
+<tr><td>6</td><td>②</td><td>中</td><td><b>一本化 A の「WebView にフォーカスがあるか」を知る手段が決まっておらず、知れなかったときの代案が無い。</b>plan.md:231 は「フォーカスの判定方法は PoC で決める」だけ。<code>NativeWebView</code> は OS の部品で、中のフォーカスを Avalonia の <code>FocusManager</code> がどう表すか（<code>NativeWebView</code> 自身か null か）は未確認（要確認）。</td><td>PoC で、WebView をクリックした後の <code>FocusManager.GetFocusedElement()</code> と、そのときの KeyDown の <code>e.Source</code> を記録する項目を足す。それが <code>NativeWebView</code> なら「Tunnel は e.Source が NativeWebView なら捨てる」で A が作れる。判定できなければ代案 C（下の Q2）を使う。#4 の BeginEdit 化をしておけば、二重の害は ←→ だけに絞れる。</td></tr>
+
+<tr><td>7</td><td>②</td><td>低</td><td><b>ページで ←→ を <code>preventDefault</code> すると、横にはみ出した表・コードブロックをキーで横スクロールできなくなる。</b>plan.md:225。</td><td>そのままで許容する（TODO の用途では横長は稀。マウス・タッチパッドで横に動かせる）。README のキー操作に一言書く。</td></tr>
+
+<tr><td>8</td><td>④</td><td>中</td><td><b>日の選択を「更新してから確認」する順なので、キャンセルの戻し方が決まっていない。</b>11.3 は「<code>SelectedDay</code> を更新 →（編集中なら 11.4 の確認）→ ビューを描く」（plan.md:179）。11.4 の「別の日を開く」は「確認が通ったら日を開く」（plan.md:195）で、順が逆。キャンセルしたとき、一覧（ListBox）・カレンダーの選択と <code>SelectedDay</code> が編集中の日とずれる。</td><td>「要求 → 確認 → 確定」の順にする。カレンダー・一覧は <code>SelectedDay</code> に TwoWay で直接つながず、<code>RequestOpenDay(day)</code> を呼ぶ。キャンセルなら <code>SelectedDay</code> は変えず、一覧の選択は Post で元に戻す。4-2・5-1 のテストに「編集中に別の日→キャンセル→選択が元の日のまま」を足す。</td></tr>
+
+<tr><td>9</td><td>④⑤</td><td>中</td><td><b>空保存の削除が失敗したときの行が無い。</b>plan.md:192 は削除の成功とキャンセルだけ。要件 8.4「保存できなかったときは理由を出し、編集モードのまま」（要件:138）に対応する削除側の決めごとが無い。</td><td>11.4 に「削除が失敗 → 理由を出し、編集のまま。<code>Saved</code>・<code>DayIndex</code>・<code>Base</code> は変えない。ビューに戻る・別の日・閉じるの途中なら、その操作を中止」を足す。</td></tr>
+
+<tr><td>10</td><td>④</td><td>中</td><td><b>保存・削除で <code>DayIndex</code> が変わっても、カレンダーの点・一覧に知らせる口が無い。</b>plan.md:46（Add・Remove だけ）、plan.md:191-192。4-1・4-2 の VM は月の切り替えでしか作り直さない書き方。新しい日を保存しても点と一覧に出ない。</td><td><code>DayIndex</code> に <code>Changed</code> を持たせる（または <code>MainViewModel</code> が Add/Remove の後に Calendar・DayList の再計算を呼ぶ）。テスト：保存で点と一覧に出る、空保存の削除で消える。</td></tr>
+
+<tr><td>11</td><td>③</td><td>中</td><td><b>起動時コピーで今日のファイルを作っても、<code>DayIndex</code> に足していない。</b>11.1 は「DayIndex を全走査 → StartupCopy」（plan.md:158）、1-5 の結果は <code>Copied(from)</code> を返すだけ（plan.md:47）。今日に点が付かず、←→ で今日を飛ばす。</td><td><code>Copied</code> のとき <code>DayIndex.Add(today)</code>。11.1 と 6-2 に明記し、6-2 のテストに「コピー後、今日に点がある」を足す。</td></tr>
+
+<tr><td>12</td><td>③</td><td>中</td><td><b>データルートが書けない／無い／ファイルを指すときの後続が決まっていない。</b>11.1 は「書けなければ編集に入れない」（plan.md:157）だけで、その後の <code>DayIndex</code> 全走査・<code>StartupCopy</code> をどうするかが無い。ファイルを指すと全走査が例外になりうる。StartupCopy を走らせると「コピー失敗」も出て理由が二重になる。代案のロックファイル（plan.md:161）は <code>&lt;DataRoot&gt;</code> に置くので、書けないルートでは作れない。</td><td>書けないとき：StartupCopy は呼ばない。DayIndex は「無い・フォルダでない」なら空で始める（例外にしない）。1-4 のテストに足す。ロックファイルの置き場は「作れなければ Mutex だけ」と決める（Q3）。</td></tr>
+
+<tr><td>13</td><td>③</td><td>低</td><td><b>11.2 の表に抜けがある。</b>(a) 元が「読めないもの」と「空白だけのもの」しかないとき、<code>NoSource</code> か <code>Failed</code> か決まっていない（plan.md:169-170 の 2 行の境目）。(b) 今日のファイルは「ある」が読めない場合。(c) 「ある」を <code>DayIndex</code> で見るか <code>File.Exists</code> で見るか。</td><td>(a) は <code>Failed</code>（読めないものがあった事実を出す）。(b) は「ある」なので何もしない（上書きしない）、ビューでは #1 の <code>Failed</code> を出す。(c) は <code>File.Exists</code>（形の合う名前のフォルダ等で誤らないよう、DayFile のパスで）。3 行足す。</td></tr>
+
+<tr><td>14</td><td>①</td><td>中</td><td><b><code>OpenLocalLink</code> の置き場と、<code>ShellOpen</code>・<code>AppLog</code> の置き場が合っていない。</b>計画は <code>ShellOpen</code> をアプリ側（plan.md:143）、<code>AppLog</code> を Core（plan.md:124）に置き、<code>OpenLocalLink</code> は「LocalLinkRule＋LinkProbe.Real＋ShellOpen」（plan.md:243）。<code>IPreviewHost</code> を実装する VM は Presentation にあり、アプリ側の <code>ShellOpen</code> を参照できない。Miharikun は <code>IUiServices.OpenWithDefaultApp</code>・<code>RevealInFileManager</code> 経由（<code>MemoViewModel.cs:93-101</code>、<code>Services/IUiServices.cs:19-22</code>）。<code>AppLog.Init</code> は Miharikun の <code>AppPaths.Root</code> を前提（<code>AppLog.cs:12</code>）。</td><td>Todokun の <code>IUiServices</code> に <code>OpenWithDefaultApp</code>・<code>RevealInFileManager</code> を持たせ、実装（アプリ側）が <code>ShellOpen</code> を呼ぶ。<code>AppLog.Init(cacheRoot)</code> に変える（<code>cache/logs/app.log</code>）。10 章に置き場を明記。</td></tr>
+
+<tr><td>15</td><td>①</td><td>中</td><td><b>OS のテーマが変わったときに、ビューを描き直す経路が無い。</b>4-3 は <code>ThemeVariant.Default</code>（OS 追従）だけ（plan.md:80）、11.7 は「テーマ変更は reload=true」（plan.md:244）と書くが、誰が知らせるかが無い。Miharikun は <code>ThemeService</code> が <code>ActualThemeVariantChanged</code> を受け（<code>Miharikun/ThemeService.cs:25</code>）、<code>AppComposition</code> が各 VM の <code>OnThemeChanged</code> を呼ぶ（<code>AppComposition.cs:73-74</code>）。要件 5 章も <code>ThemeService</code> の考え方の流用を挙げている（要件:76）。</td><td>設定保存を除いた小さな <code>ThemeService</code>（<code>IsDark</code> と <code>Changed</code>）を持ち込み、<code>Changed → MainViewModel.OnThemeChanged → PreviewChanged(source, reload:true)</code>。4-3 と 10 章に足す。</td></tr>
+
+<tr><td>16</td><td>①</td><td>低</td><td><b>11.7 の「持ち込む」「削る」に抜けがある。</b>(画面) <code>OnDataContextChanged</code>（<code>HeadingScrollRequested</code> の購読を外す：<code>MarkdownPreview.axaml.cs:45-59</code>）、<code>OnPreviewChanged</code> の例外処理（:61-73）、<code>ShowMessage</code>・<code>BackgroundFor</code>（:75-80・:169）、<code>RenderMarkdownTextAsync</code>（<code>EnsureLib</code> の引数を外す：:203-210）、<code>OnWebMessageReceived</code>（<code>PreviewKeyMessage</code> へ差し替え：:323-327）。(Docs) <code>Render</code> は <code>RenderWithOutline</code> 経由で <code>MarkdownOutline.Extract</code>・<code>MarkdownRendering</code> に依存（<code>MarkdownRenderer.cs:71-72</code>・<code>:149</code>、<code>MarkdownOutline.cs:14</code>）、<code>EscapeListenerScript</code>（:35-44）、埋め込みリソース名の文字列 <code>"Miharikun.Docs.Assets."</code>（:200）。</td><td>11.7 の表に行を足す。Docs 側は 3-2 に「<code>MarkdownOutline.cs</code> は持ち込まない。<code>Render</code> は Parse→ToHtml を直接。<code>EscapeListenerScript</code> はキー転送スクリプトに置き換え。リソース名は <code>Todokun.Docs.Assets.</code>」を書く（3-1 の「埋め込みリソースが読める」テストで名前の誤りは捕まる）。</td></tr>
+
+<tr><td>17</td><td>④①</td><td>低</td><td><b>3 択の確認（保存／破棄／キャンセル）と削除の確認を「<code>IUiServices</code> 越し」と書くが、Miharikun の <code>IUiServices</code> には はい／いいえ しかない。</b><code>ConfirmAsync</code> は bool（<code>IUiServices.cs:28</code>）。3 択は <code>MainWindow</code> が <code>UnsavedMemoDialog</code> を直接出している（<code>MainWindow.axaml.cs:118</code>）。確認中の再入は <code>OpenDialogs</code> で止めている（:94）。</td><td><code>Task&lt;SaveChoice&gt; AskSaveAsync()</code>・<code>Task&lt;bool&gt; ConfirmDeleteAsync()</code> を新設（フェイクで 5-1 をテスト）。確認中は日の移動・Mod+E・閉じるを受けない（<code>IsConfirming</code>）。確認の後、状態が変わっていたら何もしない（<code>MemoViewModel.cs:307-309</code> と同じ）。</td></tr>
+
+<tr><td>18</td><td>④</td><td>低</td><td><b>変更が無くても保存すると書く。</b>11.4 の保存の行は <code>IsDirty</code> を見ない（plan.md:191-193）。空白だけの既存ファイルを開いて何もせず Ctrl+S → 削除の確認が出る。Miharikun は変更が無ければ書かない（<code>MemoViewModel.cs:263-268</code>）。</td><td>「<code>IsDirty</code> でなければ保存は何もしない（編集に留まる）」を 11.4 に足す。</td></tr>
+
+<tr><td>19</td><td>①</td><td>低</td><td><b>プレビュー部品のエラー文が今回の用途に合わない。</b><code>ShowAsync</code> は IOException を「ファイルを読めません」と出す（<code>MarkdownPreview.axaml.cs:129-134</code>）。TodoPreview では本文は VM から文字で渡るので、ここに来るのは一時 HTML の書き込み失敗（<code>cache/</code> が満杯・途中で書けなくなった）。</td><td>文言を「プレビューを作れません：…（編集・保存は使えます）」にする。</td></tr>
+
+<tr><td>20</td><td>文書</td><td>低</td><td><b>「コピー元のファイルは 6 章の表に書く」が指す表が無い。</b>plan.md:19・300。6 章は P4（左ペイン）。</td><td>10 章か 11.7 に「Miharikun のコピー元 → todokun のコピー先 → 変える所」の表を作り、参照を直す（#14・#15・#16 の内容をここに集める）。</td></tr>
+</table>
+
+<h3>問題なしと判断した観点</h3>
+<ul>
+<li><span class="ok">OK</span> ⑤ <code>AtomicFile</code>：一時ファイル <code>{path}.{guid}.tmp</code> に書いてから <code>File.Replace</code>／<code>File.Move</code>、失敗しても元は無傷で一時ファイルは <code>finally</code> で消える（<code>Miharikun.Core/Storage/AtomicFile.cs:24-50</code>）。親フォルダを作る（:22）ので、新しい年・月でも書ける。<code>~RF*.TMP</code> の掃除（:58-68）。強制終了で残った <code>.tmp</code> は <code>DayFile.TryParse</code> に一致しないので無視される（plan.md:248）。</li>
+<li><span class="ok">OK</span> ⑤ 保存の失敗は「理由を出して編集のまま」（plan.md:191）、閉じるときに保存が失敗したら閉じない（plan.md:196）。Miharikun の「Closing を取り消して Post で確認→もう一度 Close」（<code>MainWindow.axaml.cs:89-135</code>）は Avalonia の待てない Closing に合う。ただし OS のサインアウト時に取り消しが効くかは要確認（自動保存は対象外なので、効かなければ未保存は失われる。README に一言）。</li>
+<li><span class="ok">OK</span> ⑤ データルートが書けないとき編集に入れない（plan.md:157・189）は、要件 3 章「保存できないまま編集させない」（要件:37）と一致。</li>
+<li><span class="ok">OK</span> ① <code>PreviewNavigationPolicy</code>・<code>LocalLinkRule</code> は名前空間 <code>Miharikun</code> だけで他に依存しない（<code>PreviewNavigationPolicy.cs</code> 全体、<code>LocalLinkRule.cs</code> 全体）。<code>isMarkdownPage</code> を常に true にすると、読み込み中の勝手な移動は Cancel（<code>PreviewNavigationPolicy.cs:36-37</code>）で、計画どおり。</li>
+<li><span class="ok">OK</span> ① <code>PreviewFiles.Write</code> はキー（フルパス）のハッシュ名で上書き（<code>Miharikun/PreviewFiles.cs:17-23</code>）。CacheKey＝日ファイルのフルパス（plan.md:241）で、一時 HTML は日ごとに 1 つ。<code>--data-dir</code> が違う 2 つの起動でもパスが違うので名前は衝突しない。<code>CleanOld</code> は直下のファイルだけ（:31-48）。</li>
+<li><span class="ok">OK</span> ① 「日を移るときは先頭から」は、日ごとにページのパスが違うので <code>sameAsCurrent</code> が false → <code>Navigate</code>（<code>MarkdownPreview.axaml.cs:148-165</code>）となり、自然にそうなる。同じ日の再描画だけ <code>window.scrollY</code> を戻す。</li>
+<li><span class="ok">OK</span> ② 長押し：<code>_version</code> で古い描画結果を捨てる（<code>MarkdownPreview.axaml.cs:84・136・154</code>）。日の移動は <code>SelectedDay</code> の更新だけで軽い、という計画（plan.md:233）は成り立つ。</li>
+<li><span class="ok">OK</span> ② ページからの知らせを決まった文字列だけ受け、Windows の引用符つきも受ける（<code>PreviewScripts.cs:16</code> と同じ作り。plan.md:228）。script を全部 <code>&lt;head&gt;</code> に置き nonce を付ける理由（<code>MarkdownRenderer.cs:100-103</code>）も計画に引き継がれている（plan.md:69）。</li>
+<li><span class="ok">OK</span> ① リストの黒丸を消す要件（要件:147）は <code>markdown-base.css</code> の <code>.task-list-item { list-style: none }</code>（<code>Miharikun.Docs/Assets/markdown-base.css:51-52</code>）で満たされる。CSS だけ持ち込む 3-1 で足りる。</li>
+<li><span class="ok">OK</span> ① <code>WebView2UserDataFolder</code> はウィンドウより前に static で決める（<code>Miharikun/App.axaml.cs:33</code>）。<code>cache/webview2</code> にする計画（plan.md:89）と合う。</li>
+<li><span class="ok">OK</span> md と html の対：11.1・11.2・11.4・11.6・11.7 の文面は同じ（上の #3〜#16 は両方を直す）。</li>
+</ul>
+
+<h2>4. 決めたいこと</h2>
+<div class="q"><b>Q1（#4）.</b> Mod+E の二重到達をどう防ぐか<br>
+A) ページからは <code>key:BeginEdit</code> だけ送り、Avalonia 経路は View→BeginEdit／Edit→ExitEdit … 利点：二重に来ても害が無い。PoC の結果を待たずに決められる／欠点：要件 11 章の文言（<code>key:ToggleEdit</code>）を直す<br>
+B) <code>key:ToggleEdit</code> のまま、PoC で二重なら一本化 A … 利点：要件どおり／欠点：#6 の判定が作れないと解決しない<br>
+<span class="rec">推奨：A</span>（ページにキーが届くのはビューモードだけなので、意味は変わらない。要件 11 章の知らせの名前だけ直す）</div>
+
+<div class="q"><b>Q2（#6）.</b> 一本化 A の判定が作れなかったときの代案<br>
+C) 重複除去：同じ種類の要求が「Avalonia 経路とページ経路から」短い間（例 30ms。キーリピートの間隔より短く。PoC で測る）に来たら、2 つ目を捨てる … 利点：フォーカスを知らなくてよい／欠点：時間の閾値に頼る<br>
+D) ページ経路を捨て、WebView にフォーカスを渡さない（クリック後に Avalonia へフォーカスを戻す）… 利点：経路が 1 つ／欠点：ページ内のテキスト選択・リンクのキー操作が効かなくなる。mac で戻せるか不明<br>
+<span class="rec">推奨：C</span>（PoC で A の判定ができればそれを使い、できなければ C。11.6 に両方を書いておく）</div>
+
+<div class="q"><b>Q3（#12）.</b> 二重起動の仕組み<br>
+A) 名前付き Mutex だけ … 利点：DataRoot が書けなくても使える。.NET は Unix でも名前付き Mutex を扱える（mac での動きは P1-6 で確かめる：要確認）／欠点：mac で不安定なら代わりが無い<br>
+B) Mutex が駄目なら <code>&lt;DataRoot&gt;/.todokun.lock</code> … 利点：クラッシュで自動解放／欠点：書けないルートでは作れない<br>
+<span class="rec">推奨：A</span>。B を残すなら置き場は <code>cache/</code> 側（ルートのハッシュ名）にし、「作れなければ二重起動の確認を諦めて起動を続ける（閲覧のみなので書き込みの衝突は起きない）」と決める。</div>
+
+<div class="sync"><b>反映先</b>：<code>docs/todokun-plan.md</code> と <code>docs/todokun-plan.html</code> の両方（連動ルール）。#4 を A にするなら <code>docs/todo-requirements.md</code> 11 章（要件:182）の <code>key:ToggleEdit</code> も直す。#1・#2 は要件 12 章（要件:190）に「UTF-8 でないファイルも読めないものとして扱う」と一行足すとよい。</div>
+</body></html>
