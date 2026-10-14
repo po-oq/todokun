@@ -10,15 +10,15 @@ using Todokun.Presentation;
 namespace Todokun.Views;
 
 /// <summary>
-/// 右ペイン（要件 8.3・8.4・10）。編集補助のキー（Tab・Shift+Tab・Ctrl/Cmd+Enter・Enter）は <c>TextBox</c> の Tunnel で受けて、
+/// 文書のペイン（TODO の右ペイン・メモタブ共通。要件 8.3・8.4・10）。編集補助のキー（Tab・Shift+Tab・Ctrl/Cmd+Enter・Enter）は <c>TextBox</c> の Tunnel で受けて、
 /// Core の純粋関数の結果を<b>範囲の置換</b>（<c>SelectedText</c>）で適用する（Undo が 1 操作で戻る。P0）。
 /// </summary>
-public partial class RightPaneView : UserControl
+public partial class DocumentPaneView : UserControl
 {
-    private DayEditorSession? _session;
+    private DocumentEditorSession? _session;
     private bool _syncing;   // 画面→VM の TextChanged を、VM→画面の書き込みのときは無視する
 
-    public RightPaneView()
+    public DocumentPaneView()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -35,13 +35,13 @@ public partial class RightPaneView : UserControl
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_session is not null) _session.PropertyChanged -= OnSessionChanged;
-        _session = (DataContext as MainViewModel)?.Editor;
+        _session = (DataContext as IDocumentPane)?.Editor;
         if (_session is not null) _session.PropertyChanged += OnSessionChanged;
     }
 
     private void OnSessionChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(DayEditorSession.Mode) || _session is null || !_session.IsEditing) return;
+        if (e.PropertyName != nameof(DocumentEditorSession.Mode) || _session is null || !_session.IsEditing) return;
         // 編集に入った：入力欄に内容を入れ、フォーカス・カーソル先頭
         _syncing = true;
         EditBox.Text = _session.Draft;

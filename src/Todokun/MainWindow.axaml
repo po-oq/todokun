@@ -4,11 +4,26 @@
         x:Class="Todokun.MainWindow"
         Title="{Binding WindowTitle}"
         Width="1000" Height="700" MinWidth="520" MinHeight="400">
-    <!-- 左ペイン（カレンダー＋一覧）と右ペイン。境界はドラッグで幅を変えられる。最小幅はカレンダーが収まる幅（要件 8.1） -->
-    <Grid x:Name="Root" ColumnDefinitions="300,6,*">
-        <views:LeftPaneView x:Name="LeftPane" Grid.Column="0" DataContext="{Binding LeftPane}" />
-        <GridSplitter x:Name="Splitter" Grid.Column="1" Width="6" ResizeDirection="Columns"
-                      Background="{DynamicResource SplitterBrush}" />
-        <views:RightPaneView x:Name="RightPane" Grid.Column="2" />
+    <Grid RowDefinitions="Auto,*">
+        <!-- 共通ヘッダー：タブ 2 つ（Miharikun と同じ見た目） -->
+        <Border Grid.Row="0" Classes="tabbar">
+            <TabStrip x:Name="MainTabs" SelectedIndex="0" SelectionChanged="OnTabChanged">
+                <TabStripItem Content="TODO" AutomationProperties.AutomationId="TabTodo" />
+                <TabStripItem Content="メモ" AutomationProperties.AutomationId="TabMemo" />
+            </TabStrip>
+        </Border>
+
+        <!-- タブの中身：2 つとも画面に載せたまま IsVisible で切り替える（WebView を作り直さないため） -->
+        <Grid Grid.Row="1">
+            <!-- TODO：左ペイン（カレンダー＋一覧）と右ペイン。境界はドラッグで幅を変えられる。最小幅はカレンダーが収まる幅（要件 8.1） -->
+            <Grid x:Name="Root" ColumnDefinitions="300,6,*">
+                <views:LeftPaneView x:Name="LeftPane" Grid.Column="0" DataContext="{Binding LeftPane}" />
+                <GridSplitter x:Name="Splitter" Grid.Column="1" Width="6" ResizeDirection="Columns"
+                              Background="{DynamicResource SplitterBrush}" />
+                <views:DocumentPaneView x:Name="RightPane" Grid.Column="2" />
+            </Grid>
+            <!-- メモ：DataContext は MemoPaneViewModel（IDocumentPane） -->
+            <views:DocumentPaneView x:Name="MemoPane" DataContext="{Binding Memo}" IsVisible="False" />
+        </Grid>
     </Grid>
 </Window>

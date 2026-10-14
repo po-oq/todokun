@@ -197,4 +197,17 @@
     <Style Selector="TextBox.editor:pointerover /template/ Border#PART_BorderElement">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     </Style>
+
+    <!-- 上部のタブ（TODO・メモ）。Miharikun と同じ：既定は大きいので、本文に近い大きさにする -->
+    <Style Selector="TabStripItem">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="12,6" />
+    </Style>
+    <Style Selector="Border.tabbar">
+        <Setter Property="Padding" Value="8,4,8,0" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource RuleBrush}" />
+        <Setter Property="Background" Value="{DynamicResource BarBackgroundBrush}" />
+    </Style>
 </Styles>

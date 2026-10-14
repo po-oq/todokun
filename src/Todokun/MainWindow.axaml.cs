@@ -21,6 +21,10 @@ public partial class MainWindow : Window
         // Tunnel：ListBox・ボタン・カレンダーが矢印キーを先に食わないように、ウィンドウ全体で先に受ける（計画 11.6）。
         // Miharikun の既存の受け口は Bubble（Esc だけ）なので先例にならない。
         AddHandler(KeyDownEvent, OnKeyDownTunnel, RoutingStrategies.Tunnel);
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is MainViewModel vm) vm.SelectedTabChanged += OnVmTabChanged;
+        };
         // 起動時間の記録（要件 12 章：3 秒以内）。プロセスの開始からウィンドウが出るまで。ログに本文は書かない
         Opened += (_, _) =>
         {
@@ -31,6 +35,27 @@ public partial class MainWindow : Window
             }
             catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
         };
+    }
+
+    // タブの切替：画面 → VM と VM → 画面（閉じる確認で未保存の側を見せるとき）。値が同じなら何もしないので再入しない
+    private void OnTabChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+        vm.SelectTab(MainTabs.SelectedIndex == 1 ? AppTab.Memo : AppTab.Todo);
+        ApplyTab(vm.SelectedTab);
+    }
+
+    private void OnVmTabChanged(AppTab tab)
+    {
+        ApplyTab(tab);
+        var index = tab == AppTab.Memo ? 1 : 0;
+        if (MainTabs.SelectedIndex != index) MainTabs.SelectedIndex = index;
+    }
+
+    private void ApplyTab(AppTab tab)
+    {
+        Root.IsVisible = tab == AppTab.Todo;
+        MemoPane.IsVisible = tab == AppTab.Memo;
     }
 
     private static KeyModifiers CommandModifiers =>
@@ -58,16 +83,16 @@ public partial class MainWindow : Window
     {
         base.OnClosing(e);
         if (_closeConfirmed || DataContext is not MainViewModel vm) return;
-        if (vm.Editor.IsConfirming)
+        if (vm.AnyConfirming)
         {
             e.Cancel = true;   // 確認中にもう一度閉じようとした：取り消すだけ（2 つ目のダイアログは出さない）
             return;
         }
-        if (!vm.Editor.IsDirty) return;   // 変更が無ければ確認なしで閉じる
+        if (!vm.AnyDirty) return;   // 変更が無ければ確認なしで閉じる
         e.Cancel = true;
         Dispatcher.UIThread.Post(async () =>
         {
-            if (await vm.Editor.CanCloseAsync())
+            if (await vm.CanCloseAsync())
             {
                 _closeConfirmed = true;
                 Close();

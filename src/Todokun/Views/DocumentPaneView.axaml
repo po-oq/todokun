@@ -1,12 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="using:Todokun.Views"
-             x:Class="Todokun.Views.RightPaneView">
-    <!-- 右ペイン：上に細いバー、本文はビュー（WebView）と編集（TextBox）を同じ場所で入れ替える（重ねない。要件 8.3） -->
+             x:Class="Todokun.Views.DocumentPaneView">
+    <!-- 文書のペイン（TODO の右ペイン・メモタブ共通）：上に細いバー、本文はビュー（WebView）と編集（TextBox）を同じ場所で入れ替える（重ねない。要件 8.3） -->
     <Grid RowDefinitions="Auto,Auto,*" Background="{DynamicResource PaneBackgroundBrush}">
         <Border Grid.Row="0" Classes="bar">
             <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" VerticalAlignment="Center">
-                <TextBlock x:Name="DayText" Text="{Binding Editor.DayText}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" />
+                <TextBlock x:Name="DayText" Text="{Binding Editor.HeaderText}" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" />
                 <Border Grid.Column="1" Classes="modebadge" Classes.editing="{Binding Editor.IsEditing}">
                     <TextBlock x:Name="ModeText" Text="{Binding Editor.ModeText}" FontSize="12" />
                 </Border>
