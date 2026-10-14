@@ -1,10 +1,10 @@
-<#
+﻿<#
 .SYNOPSIS
   todokun の Windows 向け単一ファイル exe を作る（要件 3 章・計画 7-1）。
 
 .DESCRIPTION
   self-contained・単一ファイル（ネイティブ DLL も exe に含め、実行時に展開）。出力は既定で <repo>/artifacts/win-x64。
-  できた todokun.exe を任意のフォルダに置き、そのフォルダを PATH に通すと、どこからでも `todokun` で起動できる。
+  できた todokun.exe を任意のフォルダに置き、そのフォルダを PATH に通すと、どこからでも 「todokun」 で起動できる。
   データは exe と同じフォルダの data\、キャッシュは cache\ に作られる（README 参照）。mac 向けの配布物は作らない。
 
 .EXAMPLE
@@ -31,5 +31,5 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish に失敗しました（終了�
 
 $exe = Join-Path $Output 'todokun.exe'
 Write-Host "できました: $exe"
-Write-Host "このフォルダを PATH に通すと、どこからでも `todokun` で起動できます。"
+Write-Host "このフォルダを PATH に通すと、どこからでも 「todokun」 で起動できます。"
 Write-Host "データ: $(Join-Path $Output 'data')（exe と同じ場所）"
