@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Todokun.Presentation"
+             x:DataType="vm:MemoListViewModel"
+             x:Class="Todokun.Views.MemoListView">
+    <!-- メモの一覧（左ペイン）。ヘッダー（メモ・件数・＋）／一覧の知らせ／絞り込み欄／項目。
+         項目はボタンの並び（ListBox を使わない。TODO の一覧と同じ流儀）。 -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*" Classes="sidebar">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="12,10,8,6">
+            <TextBlock Text="メモ" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock x:Name="MemoCount" Grid.Column="1" Text="{Binding CountText}" Classes="dim"
+                       VerticalAlignment="Center" Margin="8,0" />
+            <Button x:Name="MemoAdd" Grid.Column="2" Content="＋" Classes="primary" Padding="10,2"
+                    Command="{Binding AddCommand}" ToolTip.Tip="メモを追加（Ctrl+N）"
+                    AutomationProperties.AutomationId="MemoAdd" />
+        </Grid>
+
+        <!-- 一覧の知らせ（改名の置き換え・失敗・見つからない）。次の一覧の操作で消える -->
+        <Border x:Name="MemoNoticeBar" Grid.Row="1" Classes="messagebar" Padding="12,6" IsVisible="{Binding HasNotice}">
+            <TextBlock x:Name="MemoNotice" Text="{Binding Notice}" TextWrapping="Wrap" FontSize="12"
+                       AutomationProperties.AutomationId="MemoNotice" />
+        </Border>
+
+        <TextBox x:Name="MemoSearch" Grid.Row="2" Text="{Binding Query}" PlaceholderText="絞り込み（タイトル・本文）"
+                 Margin="8,6,8,6" AutomationProperties.AutomationId="MemoSearch" />
+
+        <Grid Grid.Row="3">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="MemoItems" ItemsSource="{Binding Items}" Margin="6,0,6,6">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MemoListItem">
+                            <Button Classes="listitem" Classes.selected="{Binding IsSelected}" Command="{Binding OpenCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="{Binding Title, StringFormat=MemoItem_{0}}">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding Snippet}" Classes="dim" TextTrimming="CharacterEllipsis"
+                                                   FontWeight="Normal" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ModifiedText}" Classes="dim"
+                                                   FontWeight="Normal" Margin="8,0,0,0" />
+                                    </Grid>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 空の状態 -->
+            <TextBlock x:Name="MemoEmpty" Text="メモがありません。＋で追加できます" Classes="dim" TextWrapping="Wrap"
+                       Margin="16,24" HorizontalAlignment="Center" IsVisible="{Binding IsEmpty}" />
+            <TextBlock x:Name="MemoNoMatch" Text="一致するメモがありません" Classes="dim" TextWrapping="Wrap"
+                       Margin="16,24" HorizontalAlignment="Center" IsVisible="{Binding NoMatch}" />
+        </Grid>
+    </Grid>
+</UserControl>

@@ -24,8 +24,13 @@
                               Background="{DynamicResource SplitterBrush}" />
                 <views:DocumentPaneView x:Name="RightPane" Grid.Column="2" />
             </Grid>
-            <!-- メモ：DataContext は MemoPaneViewModel（IDocumentPane） -->
-            <views:DocumentPaneView x:Name="MemoPane" DataContext="{Binding Memo}" IsVisible="False" />
+            <!-- メモ：左に一覧、右は今のビュー／編集。DataContext は MemoPaneViewModel（IDocumentPane）。一覧は Memo.List -->
+            <Grid x:Name="MemoRoot" ColumnDefinitions="260,6,*" IsVisible="False">
+                <views:MemoListView x:Name="MemoList" Grid.Column="0" DataContext="{Binding Memo.List}" />
+                <GridSplitter Grid.Column="1" Width="6" ResizeDirection="Columns"
+                              Background="{DynamicResource SplitterBrush}" />
+                <views:DocumentPaneView x:Name="MemoPane" Grid.Column="2" DataContext="{Binding Memo}" IsVisible="False" />
+            </Grid>
         </Grid>
     </Grid>
 </Window>

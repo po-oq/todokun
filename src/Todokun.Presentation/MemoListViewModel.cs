@@ -73,6 +73,7 @@ public sealed partial class MemoListViewModel : ObservableObject
         _editor = editor;
         _ui = ui;
         _nowUtc = nowUtc ?? (() => DateTime.UtcNow);
+        AddCommand = new AsyncRelayCommand(AddAsync);
         index.Changed += Rebuild;
         editor.PropertyChanged += (_, e) =>
         {
@@ -85,6 +86,9 @@ public sealed partial class MemoListViewModel : ObservableObject
     public event Action? FocusSearchRequested;
 
     public void RequestFocusSearch() => FocusSearchRequested?.Invoke();
+
+    /// <summary>「＋」。</summary>
+    public IAsyncRelayCommand AddCommand { get; }
 
     public int Count => _index.Count;
     public bool IsEmpty => _index.Count == 0;

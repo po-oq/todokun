@@ -12,12 +12,16 @@ public partial class MainWindow : Window
     /// <summary>左ペインの最小幅（pt）。月グリッド 7 × 36 ＋ 余白がちょうど収まる幅。</summary>
     public const double LeftPaneMinWidth = 272;
 
+    /// <summary>メモの一覧（左ペイン）の最小幅（pt）。</summary>
+    public const double MemoListMinWidth = 200;
+
     private bool _closeConfirmed;
 
     public MainWindow()
     {
         InitializeComponent();
         Root.ColumnDefinitions[0].MinWidth = LeftPaneMinWidth;
+        MemoRoot.ColumnDefinitions[0].MinWidth = MemoListMinWidth;
         // Tunnel：ListBox・ボタン・カレンダーが矢印キーを先に食わないように、ウィンドウ全体で先に受ける（計画 11.6）。
         // Miharikun の既存の受け口は Bubble（Esc だけ）なので先例にならない。
         AddHandler(KeyDownEvent, OnKeyDownTunnel, RoutingStrategies.Tunnel);
@@ -55,6 +59,7 @@ public partial class MainWindow : Window
     private void ApplyTab(AppTab tab)
     {
         Root.IsVisible = tab == AppTab.Todo;
+        MemoRoot.IsVisible = tab == AppTab.Memo;
         MemoPane.IsVisible = tab == AppTab.Memo;
     }
 
