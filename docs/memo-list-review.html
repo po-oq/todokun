@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>メモの複数化 計画レビュー</title>
+<style>
+body{font-family:"Yu Gothic UI",sans-serif;max-width:1000px;margin:20px auto;padding:0 16px;line-height:1.65;color:#222}
+h1{font-size:22px} h2{font-size:17px;border-left:5px solid #2b6cb0;padding-left:8px;margin-top:32px} h3{font-size:15px;margin:16px 0 4px}
+table{border-collapse:collapse;margin:8px 0;width:100%} td,th{border:1px solid #bbb;padding:4px 8px;font-size:13.5px;vertical-align:top} th{background:#eef;text-align:left}
+code{background:#f0f0f0;padding:0 4px} pre{background:#f6f6f6;border:1px solid #ccc;padding:10px;font-size:12.5px;line-height:1.5;overflow:auto}
+.q{background:#fff6dd;border:1px solid #e0c060;padding:6px 14px;margin:8px 0} .rec{color:#c05000;font-weight:bold} .ok{color:#2a7a2a;font-weight:bold} .ng{color:#b33;font-weight:bold}
+.sync{background:#e8f4ff;border:1px solid #9bc;padding:6px 14px;margin:10px 0}
+svg{background:#fafafa;border:1px solid #ccc;max-width:100%}
+</style></head><body>
+<h1>メモの複数化 実装計画のレビュー</h1>
+<p><b>結論：<span class="ng">直してから進める</span></b>。進め方（Core → 共通化 → 画面）とコミットの分け方はそのままでよいです。ただし、計画の決めごと（7 章）に次の 4 つの穴があり、実装の前に計画を直してください：<b>#1 引き継ぎで memo.md が取り残される経路</b>、<b>#2 「メモなし」の状態で編集に入れてしまう（基底クラスに止める口が無い）</b>、<b>#3 WebView にフォーカスがあると Ctrl/Cmd+N・F が効かない</b>、<b>#4 正規化を 2 回かけると結果が変わる（冪等でない）</b>。</p>
+<p>対象：<code>docs/memo-list-plan.md</code>（図解 <code>memo-list-plan.html</code> も内容が同じであることを確認）。コードは変えていません。<span class="ng">赤</span>＝問題、<span class="ok">緑</span>＝問題なし。重大度は「高＝データが見えなくなる・仕様どおりに動かない」「中＝特定の操作で抜ける・計画が食い違っている」「低＝体験・保守の問題」。</p>
+
+<h2>1. 確認した範囲</h2>
+<ul>
+<li>文書：<code>docs/memo-list-plan.md</code>・<code>memo-list-plan.html</code>・<code>memo-list-requirements.md</code>・<code>memo-list-design.html</code>・<code>todo-requirements.md</code>（8.3〜8.6、11 章のキーの節 201〜235 行）</li>
+<li>Presentation：<code>DocumentEditorSession.cs</code>・<code>MemoEditorSession.cs</code>・<code>DayEditorSession.cs</code>・<code>MainViewModel.cs</code>・<code>MemoPaneViewModel.cs</code>・<code>Services/IUiServices.cs</code></li>
+<li>Core：<code>MemoStore.cs</code>・<code>DayIndex.cs</code>・<code>DayFile.cs</code>・<code>AtomicFile.cs</code>・<code>Utf8TextFile.cs</code>・<code>AppStartup.cs</code>・<code>SingleInstance.cs</code></li>
+<li>画面：<code>MainWindow.axaml(.cs)</code>・<code>Views/DocumentPaneView.axaml(.cs)</code>・<code>Views/LeftPaneView.axaml</code>・<code>Views/TodoPreview.axaml.cs</code>・<code>Todokun.Docs/KeyForwarderScript.cs</code></li>
+<li>テスト：<code>tests/Todokun.Tests/MemoEditorSessionTests.cs</code>・<code>MemoTabViewModelTests.cs</code>・<code>tests/Todokun.UiTests/MemoTabTests.cs</code></li>
+</ul>
+
+<h2>2. 概念図（問題の箇所）</h2>
+<svg viewBox="0 0 960 360" width="960" font-size="13" font-family="sans-serif">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#333"/></marker></defs>
+<!-- 利用側 -->
+<rect x="10" y="20" width="200" height="60" fill="#efe" stroke="#383"/>
+<text x="18" y="42" font-weight="bold">MainWindow（Tunnel）</text><text x="18" y="62" font-size="12">←→・Ctrl+E ＋ N・F・F2・Del</text>
+<rect x="10" y="110" width="200" height="60" fill="#dfd" stroke="#383"/>
+<text x="18" y="132" font-weight="bold">MemoListView（新規）</text><text x="18" y="152" font-size="12">クリック・✕・改名欄・検索</text>
+<rect x="10" y="230" width="200" height="60" fill="#fde" stroke="#b33"/>
+<text x="18" y="252" font-weight="bold">WebView（ビュー）</text><text x="18" y="272" font-size="12">本文クリック後はここにフォーカス</text>
+<!-- VM -->
+<rect x="260" y="20" width="220" height="60" fill="#dff" stroke="#08a"/>
+<text x="268" y="42" font-weight="bold">MainViewModel.OnWindowKey</text><text x="268" y="62" font-size="12">IsConfirming なら捨てる</text>
+<rect x="260" y="110" width="220" height="80" fill="#fde" stroke="#b33"/>
+<text x="268" y="132" font-weight="bold">MemoListViewModel（新規）</text><text x="268" y="150" font-size="12">Open・Add・Rename・Delete</text><text x="268" y="168" font-size="12">削除の確認で IsConfirming なし</text>
+<rect x="530" y="20" width="200" height="60" fill="#fde" stroke="#b33"/>
+<text x="538" y="42" font-weight="bold">DocumentEditorSession</text><text x="538" y="62" font-size="12">DeleteWhenBlank のみ（2-1）</text>
+<rect x="530" y="110" width="200" height="80" fill="#dfd" stroke="#383"/>
+<text x="538" y="132" font-weight="bold">MemoEditorSession</text><text x="538" y="150" font-size="12">Open・TryOpen・RenameTo</text><text x="538" y="168" font-size="12">Clear（メモなし）</text>
+<!-- Core -->
+<rect x="780" y="110" width="170" height="80" fill="#dfd" stroke="#383"/>
+<text x="788" y="132" font-weight="bold">MemoLibrary</text><text x="788" y="150" font-weight="bold">MemoIndex</text><text x="788" y="170" font-size="12">MemoTitle.Normalize</text>
+<rect x="780" y="230" width="170" height="60" fill="#fde" stroke="#b33"/>
+<text x="788" y="252" font-weight="bold">MemoMigration</text><text x="788" y="272" font-size="12">memos/ の有無で判定</text>
+<rect x="530" y="230" width="200" height="60" fill="#eee" stroke="#888"/>
+<text x="538" y="252" font-weight="bold">データルート</text><text x="538" y="272" font-size="12">memo.md ／ memos/*.md</text>
+<!-- 矢印 -->
+<line x1="210" y1="50" x2="260" y2="50" stroke="#333" marker-end="url(#a)"/>
+<line x1="210" y1="140" x2="260" y2="140" stroke="#333" marker-end="url(#a)"/>
+<line x1="370" y1="80" x2="370" y2="110" stroke="#333" marker-end="url(#a)"/>
+<line x1="480" y1="150" x2="530" y2="150" stroke="#333" marker-end="url(#a)"/>
+<line x1="630" y1="110" x2="630" y2="80" stroke="#333" stroke-dasharray="5,3" marker-end="url(#a)"/>
+<text x="636" y="100" font-size="11" fill="#555">継承</text>
+<line x1="730" y1="150" x2="780" y2="150" stroke="#333" marker-end="url(#a)"/>
+<line x1="780" y1="260" x2="730" y2="260" stroke="#333" marker-end="url(#a)"/>
+<line x1="830" y1="190" x2="700" y2="230" stroke="#333" stroke-dasharray="5,3"/>
+<path d="M210,255 L235,255 L235,72 L258,72" fill="none" stroke="#b33" stroke-dasharray="5,3" marker-end="url(#a)"/>
+<!-- 問題の番号 -->
+<text x="18" y="310" font-size="12" fill="#b33">#3 Cmd+N/F は届くのに捨てる。Win はページ転送なし</text>
+<text x="268" y="210" font-size="12" fill="#b33">#7 #8 #9 #15 確認・改名中の抜け</text>
+<text x="538" y="14" font-size="12" fill="#b33">#2 #5 「メモなし」の口・空保存の位置</text>
+<text x="780" y="310" font-size="12" fill="#b33">#1 取り残し・#12 お知らせ先</text>
+<text x="862" y="207" font-size="12" fill="#b33">#4 #10 #11 #13</text>
+<text x="10" y="345" font-size="12" fill="#c05000">※ 一覧で起きた失敗の知らせ（#14）は Editor.Message ＝ 右ペインのバーに出す計画だが、次に開いたときの ShowContent で消える</text>
+</svg>
+
+<h2>3. 問題一覧</h2>
+<table>
+<tr><th style="width:3%">#</th><th style="width:5%">重大度</th><th style="width:46%">何が問題か（根拠）</th><th>どう解決するか</th></tr>
+
+<tr><td>1</td><td class="ng">高</td><td><b>② 引き継ぎに失敗した後に「＋」でメモを作ると、memo.md が二度と引き継がれない。</b>7.3 は「<code>memos/</code> があれば何もしない」で判定する（<code>docs/memo-list-plan.md:155</code>）。コピーに失敗すると memo.md は残るが（<code>:158</code>）、そのまま起動を続けて「＋」を押すと <code>MemoLibrary.Create</code> が <code>memos/</code> を作る。次の起動は「<code>memos/</code> がある」ので何もしない → 古いメモは消えてはいないが<b>一覧に二度と出ない</b>（要件 NFR「引き継ぎで元の内容を失わない」の実質的な違反）。<br>同じ穴：コピーするには先に <code>memos/</code> を作るので、途中で失敗すると空の <code>memos/</code> が残る（「<code>memos/</code> は作らない」<code>:158</code> は守れない）。コピー先に直接書くと、途中で止まったとき半端な <code>memos/メモ.md</code> が残り、同じく二度と再試行されない。<br>二重起動は <code>SingleInstance</code> で普段は防げている（<code>src/Todokun.Core/AppStartup.cs:33-35</code>）が、確認を使えないとき（<code>:36-37</code>）は起動が続くので、2 つが同時に引き継ぐことがある（上書きなしのコピーなら、後の方は「失敗」と誤って知らせるだけで、データは失わない）。</td>
+<td>判定を「<code>memos/</code> があるか」ではなく<b>「memo.md があるか」</b>にする（下の図）。
+<ol style="margin:4px 0;padding-left:18px">
+<li>memo.md が無い → 何もしない。</li>
+<li><code>memos/*.md</code> に<b>memo.md と同じバイト列</b>のファイルがある → コピーはせず、memo.md の削除だけを試す（コピー済みで削除に失敗した前回の続き。二重には作らない）。</li>
+<li>無い → <code>memos/</code> の中の一時ファイル（<code>.tmp</code>。走査が無視する名前）にバイト列のまま書き、<code>File.Move</code>（上書きなし）で <code>UniqueTitle("メモ")</code>.md にする → 成功したら memo.md を消す。失敗したら一時ファイルを消し、memo.md は残す。</li>
+</ol>
+これで「途中で止まる」「先に <code>memos/</code> ができる」「二重起動」のどれでも、次の起動で正しい状態に戻る。9 章の「同名があれば <code>メモ (2)</code>」（<code>:248</code>）も、この形で初めて意味を持つ（今の条件では <code>memos/</code> が無いので同名は起きない）。1-3 のテストに「失敗 → <code>memos/</code> を作る → 次の起動で引き継ぐ」「一時ファイルだけ残っている」を足す。</td></tr>
+
+<tr><td>2</td><td class="ng">高</td><td><b>① 「メモなし」（<code>Clear()</code>）で編集に入るのを止める口が、基底クラスに無い。</b>2-2 は「<code>Clear()</code>＝見出し『メモなし』・編集に入れない」とする（<code>docs/memo-list-plan.md:54</code>）が、2-1 で足す口は <code>DeleteWhenBlank</code> だけ（<code>:53</code>）。編集に入れるかは基底の <code>CanBeginEdit</code>・<code>BeginEdit</code> が決めていて、見ているのは「読めない」と「書けない」だけ（<code>src/Todokun.Presentation/DocumentEditorSession.cs:117</code>、<code>:152-173</code>）。virtual でないので派生から止められない。このままだと Ctrl/Cmd+E（<code>MemoPaneViewModel.cs:50,56</code>）や「✎ 編集」で編集に入り、保存でタイトルの無い保存先へ書こうとする。チェックボックス（<code>DocumentEditorSession.cs:260-</code>）も同じ。</td>
+<td>2-1 で口をもう 1 つ足す：<code>protected virtual bool HasDocument => true;</code>（日は常に true）。<code>CanBeginEdit</code>・<code>BeginEdit</code>・<code>SaveCoreAsync</code>・<code>ToggleCheck</code> の先頭で見る。<code>BeginEdit</code> は false のとき <code>Message</code> に「メモがありません。＋で追加してください」。<code>Clear()</code>・<code>Open()</code> で <code>OnPropertyChanged(nameof(CanBeginEdit))</code>。2-1 の挙動不変のテストに「既定 true では何も変わらない」、2-2 に「メモなしで Ctrl+E・保存・チェックが何もしない」を足す。</td></tr>
+
+<tr><td>3</td><td class="ng">高</td><td><b>④ WebView にフォーカスがあると Ctrl/Cmd+N・Ctrl/Cmd+F が効かない。</b>7.5 は「WebView にフォーカスが無い」ときだけ扱い、ページからの転送も足さない（<code>docs/memo-list-plan.md:195-196,203</code>）。ところが要件は「本文をクリックした後は常にこの状態」と書いている（<code>docs/todo-requirements.md:201</code>）。mac では Cmd+キーはページに届かず Avalonia に 1 回だけ届く（<code>:230</code>。<code>e.Source</code> は <code>NativeWebView</code>）ので、届いているのにわざわざ捨てることになる。Windows の WebView2 では Avalonia にキーが届かず、Ctrl+F は WebView2 の検索バーが開く可能性がある（要確認）。要件の「Ctrl+N（＋）で追加」「Ctrl+F で検索欄に移る」（<code>docs/memo-list-requirements.md:43,92</code>）を、ビューを読んでいる最中という一番多い場面で満たさない。</td>
+<td>
+<b>mac</b>：<code>fromWebView</code> でも N・F は扱う（Ctrl+E と同じ。<code>MainViewModel.cs:180-182</code>。二重に届かないことは P0 で確認済み）。<br>
+<b>Windows</b>：<code>KeyForwarderScript</code>（<code>src/Todokun.Docs/KeyForwarderScript.cs:20-25</code>）に <code>key:NewMemo</code>・<code>key:FindMemo</code> を足す（<code>preventDefault</code>。押し続けは送らない）。<code>PreviewKeyMessage</code>・<code>PageKey</code> に足す。<br>
+<b>二重に届く対策</b>：Ctrl+N は冪等でない（2 回届くとメモが 2 つできる）ので、←→ と同じ「WebView にフォーカスがあるときはページ経路だけ、無いときは Avalonia 経路だけ」に一本化する。ただし mac はページに届かないので、Ctrl+E と同じく <code>ModEToggle</code> 式の短い間の重複を捨てる仕組みのほうが両 OS で安全（推奨）。F2・Delete は WebView では扱わない（今の計画どおり）でよい。<br>
+足したら 7.5 の「足さない」の 1 行（<code>:203</code>）を直し、要件 11 章のキー表にも書く。</td></tr>
+
+<tr><td>4</td><td class="ng">高</td><td><b>⑤ 正規化を 2 回かけると結果が変わる（冪等でない）。</b>7.1 は「上の順は固定」「冪等であること（テストで確かめる）」とする（<code>docs/memo-list-plan.md:136</code>）が、順番どおりに 1 回ずつでは冪等にならない：
+<ul style="margin:4px 0;padding-left:18px">
+<li><code>"a.md "</code>：<code>.md</code> を取る時点では末尾が空白なので取れない → 空白を取って <code>"a.md"</code>。もう一度かけると <code>"a"</code>。</li>
+<li><code>"a.md.md"</code> → <code>"a.md"</code> → <code>"a"</code>。<code>"a.md."</code> も同じ。</li>
+<li>100 文字で切った結果の末尾が <code>.md</code> になることがある（<code>:134</code> は切った後に空白と <code>.</code> だけを取り直す）。</li>
+</ul>
+要件側の並び（置換 → 制御文字 → 前後の空白 → 末尾の <code>.</code> → 予約名 → 100 文字 → <code>.md</code>。<code>docs/memo-list-requirements.md:87</code>）とも順番が違う。</td>
+<td>「取る」系を<b>変わらなくなるまで繰り返す</b>形に決め直す：<br>
+<code>置換 → 制御文字 → [前後の空白 → 末尾の .md → 先頭の . → 末尾の . ] を不動点まで → 空なら空 → 100 文字で切る → もう一度 [ ] を不動点まで → 予約名</code>（予約名は短いので最後でも 100 文字を超えない）。<br>
+1-1 のテストに上の 3 例と、生成した入力での <code>Normalize(Normalize(x)) == Normalize(x)</code> を足す。要件の「振る舞いの詳細」の並びも 4-1 でこの順に揃える（中身の規則は同じで、順番だけの話なので利用者への影響は無い）。</td></tr>
+
+<tr><td>5</td><td class="ng">中</td><td><b>① <code>DeleteWhenBlank=false</code> の分岐を置く場所が決まっていない。</b>空で保存したときの流れは「本文が空でない → 書く」（<code>DocumentEditorSession.cs:190</code>）の後に「ファイルが無い → 何もしない（NoChange）」（<code>:215-219</code>）がある。「空の分岐を切り替える」を素直に <code>:215</code> 以降に入れると、外で消されたメモを空で保存したときに NoChange になり、計画の「空でも書く」（<code>docs/memo-list-plan.md:184</code>）と食い違う。<br>あわせて、保存後の <code>MemoIndex.Touch</code> が更新日時しか直さないと（<code>:146</code>）、一覧の抜粋が古いまま残る（チェックボックスのクリック <code>DocumentEditorSession.cs:302</code> の <code>AfterWritten</code> も同じ）。一覧に無い名前への <code>Touch</code>（外で消えていて保存で作り直した）の扱いも無い。</td>
+<td>2-1 の内容を「<code>if (!IsBlank(Draft) || !DeleteWhenBlank)</code> を<b>書く分岐</b>の条件にする（<code>StoreExists</code> の判定より前）」と書く。2-1 のテストに「ファイルが無いメモを空で保存すると、空のファイルができる」を足す。<br>
+<code>Touch(title, text)</code> にして、抜粋も保存した本文から作り直す（読み直さない）。一覧に無ければ足す。<br>
+<span class="ok">影響なし</span>：<code>IsDirty</code> は <code>Norm(Draft) != Norm(Base)</code> だけで決まり（<code>:112</code>）、空保存の扱いに依らない。空のメモはプレビューがメッセージになりページを作らない（7.7）ので、<code>ToggleCheck</code> は来ない。空白だけの本文を書いた後の <code>Content</code> は空白入りの <code>Loaded</code> になる（<code>:204</code>）→ 7.7 の「空白だけ」で拾えている。</td></tr>
+
+<tr><td>6</td><td class="ng">中</td><td><b>③ 開いているメモをもう一度クリックしたときの扱いが無い。</b>日の選択には「同じ日なら何もしない」近道がある（<code>MainViewModel.cs:103-107</code>）。7.4 の表には無く（<code>docs/memo-list-plan.md:171-173</code>）、<code>TryOpenAsync</code> をそのまま呼ぶと、編集中なら「保存しますか？」が出るか、未変更なら編集を抜けてビューに戻ってしまう（<code>DayEditorSession.cs:58-64</code> と同じ流れ）。ダブルクリックでの改名（1 回目のクリックが「開く」）でも起きる。</td>
+<td>7.4 に「開いているメモのクリック：何もしない（選択の見た目だけ直す）」の行を足す。<code>OpenAsync</code> の先頭で <code>title == Editor.Title</code>（大文字小文字を無視）なら true を返す。テストを 1 行足す。</td></tr>
+
+<tr><td>7</td><td class="ng">中</td><td><b>③ 一覧が出す確認（削除）の間、<code>IsConfirming</code> が立たない。</b>計画は一覧が <code>IUiServices.ConfirmDeleteAsync</code> を直接使う（<code>docs/memo-list-plan.md:55</code>）。ところが「確認中は何もしない」の守りは全部 <code>Editor.IsConfirming</code> を見ている：キー（<code>MainViewModel.cs:169</code>）、閉じる（<code>MainWindow.axaml.cs:86</code> の <code>AnyConfirming</code>）、チェックボックス（<code>DocumentEditorSession.cs:262</code>）、ページのキー（<code>MemoPaneViewModel.cs:49</code>）。一覧の確認の間だけ、これらが素通りになる。確認の後に、消そうとしたメモがまだあるか・開いているメモが変わっていないかの確認（<code>_generation</code> の流儀）も書かれていない。</td>
+<td>7.4 に「一覧の確認も <code>Editor.IsConfirming</code> を <code>try/finally</code> で立てる。確認の前に <code>_generation</code> 相当（一覧の版）を取り、後で変わっていたら何もしない」を足す。<code>Open</code>・<code>Add</code>・<code>BeginRename</code>・<code>Delete</code> の入口でも <code>IsConfirming</code> なら何もしない。<code>IsConfirming</code> の setter は今も公開なので（<code>DocumentEditorSession.cs:54-55</code>）、口を足すなら <code>RunConfirmAsync(Func&lt;Task&lt;T&gt;&gt;)</code> のような小さな関数を基底に置くと、2 つの流儀が分かれない。</td></tr>
+
+<tr><td>8</td><td class="ng">中</td><td><b>③ 改名中に他の操作が来たときの順番と、確定の二重実行。</b>9 章の「フォーカスが外れたら確定」（<code>docs/memo-list-plan.md:245</code>）は、Enter で確定 → 入力欄が消える → もう一度 LostFocus、と確定が 2 回走りやすい（2 回目は古い名前で <code>Rename</code> して「外で変わった」と失敗を出す）。改名中に別のメモのクリック・✕・Ctrl+N・タブの切り替えが来たときの順番（先に確定するか）も無い。「＋」は「作る → 入力 → 確定したら開く」の 2 段（<code>:174</code>）なので、入力中に別のメモをクリックすると「確定して新しいメモを開く」と「クリックしたメモを開く」がぶつかる。</td>
+<td>7.4 に決めごとを足す：
+<ul style="margin:4px 0;padding-left:18px">
+<li><code>CommitRename</code> は冪等：最初に <code>IsRenaming=false</code> にしてから処理し、2 回目は何もしない。改名中の項目は VM に 1 つだけ。</li>
+<li><code>Open</code>・<code>Add</code>・<code>Delete</code>・タブ切替の入口で、改名中なら<b>先に同期で確定</b>する。消す対象が改名中の項目なら取消。</li>
+<li>「＋」は作った直後に<b>そのメモを開いてから</b>（ビュー・空）入力状態にする。確定・Esc で <code>BeginEdit</code> するだけ。これで「入力中に別のメモをクリック」は普通の切り替え（確認なし。空なので未保存も無い）になる。</li>
+<li>ダブルクリックの改名は、1 回目のクリックで開けたとき（確認でキャンセルされなかったとき）だけ始める。</li>
+</ul></td></tr>
+
+<tr><td>9</td><td class="ng">中</td><td><b>③ 削除後の「隣」と絞り込みの関係が無い。</b>「隣（一覧で次、無ければ前）を開く。0 件ならメモなし」（<code>docs/memo-list-plan.md:181</code>）は、絞り込み中に最後の 1 件を消したとき、他にメモがあっても「メモなし」になるのか、絞り込みの外のメモを開くのかが決まらない。</td>
+<td>「隣は<b>いま見えている並び</b>で選ぶ。見えている並びが 0 件になったら、絞り込みを消さずに『メモなし』（右ペインに『絞り込みに一致するメモがありません』）」など、どちらかに決めて 7.4 に書く。推奨：見えている並びで選ぶ（見えていないメモが急に開くのは分かりにくい）。</td></tr>
+
+<tr><td>10</td><td class="ng">中</td><td><b>⑤ 予約名の「拡張子の前の部分」が曖昧で、末尾に <code>_</code> を付ける方法では直らない場合がある。</b>タイトルはそのまま <code>&lt;タイトル&gt;.md</code> になるので、<code>CON.txt</code> は <code>CON.txt.md</code>。Windows は最初の <code>.</code> の前（<code>CON</code>）で予約名と見なす。計画の「末尾に <code>_</code>」（<code>docs/memo-list-plan.md:133</code>）だと <code>CON.txt_</code> になり、最初の <code>.</code> の前はまだ <code>CON</code> のまま。<code>COM¹</code>〜<code>COM³</code>・<code>LPT¹</code>〜<code>LPT³</code>（上付き数字）や <code>CONIN$</code>・<code>CONOUT$</code> も予約されている。</td>
+<td>判定は「最初の <code>.</code> の前（後ろの空白を除く）」、直し方は「その部分の直後に <code>_</code>」（<code>CON.txt</code> → <code>CON_.txt</code>、<code>con</code> → <code>con_</code>）。一覧に上付き数字と <code>CONIN$</code>・<code>CONOUT$</code> を足す。1-1 のテストに <code>CON.txt</code>・<code>nul .md</code>・<code>COM¹</code> を足す。Windows 実機の確認項目（4-1）にも 1 行。</td></tr>
+
+<tr><td>11</td><td class="ng">中</td><td><b>⑤ 「(2)」を付けると 100 文字を超える。</b><code>UniqueTitle</code> は正規化の後に <code> (2)</code> を足す（<code>docs/memo-list-plan.md:137</code>）ので、100 文字のタイトルが 104 文字になる。後で正規化し直す実装だと、切ったときに <code> (2)</code> が消えて同名に戻る。</td>
+<td><code>UniqueTitle</code> は「本体 ＋ <code> (n)</code>」が 100 文字以内になるよう、本体のほうを切る（サロゲートペアを割らない。切った後に末尾の空白・<code>.</code> を取る）。テストに「100 文字の同名」を足す。</td></tr>
+
+<tr><td>12</td><td class="ng">中</td><td><b>② ⑥ 引き継ぎのお知らせが TODO 側のバーに出て、メモタブでは見えない。</b>起動時のお知らせは 1 つの文字列（<code>AppStartup.cs:14</code>）で、日の編集の <code>Message</code> に入る（<code>MainViewModel.cs:53</code>）。日を開く・編集に入ると消える。データルートが書けないときのお知らせ（<code>AppStartup.cs:51</code>）と引き継ぎの理由をどうまとめるかも無い。</td>
+<td><code>StartupResult</code> に <code>MemoNotice</code> を別に持たせ、<code>Memo.Editor.Message</code>（メモタブのバー）に出す。TODO 側のお知らせはそのまま。「書けない」のときは両方に出る（TODO は今の文、メモは 7.3 の文）。</td></tr>
+
+<tr><td>13</td><td class="ng">中</td><td><b>⑤ 大文字小文字だけの改名で一時名を経由すると、途中で止まったときメモが一覧から消える。</b>計画は「一時名経由」（<code>docs/memo-list-plan.md:227</code>）。一時名が <code>.tmp</code> など走査が無視する名前（<code>:143</code>）だと、1 回目の Move と 2 回目の間で止まったとき、ファイルはあるのに一覧に出ず、戻す仕組みも無い。また、mac の APFS はファイル名の Unicode 正規化（NFC と NFD）も区別しないが、大文字小文字を無視した比較だけでは同名と判定できない（入力は NFC、Finder で作ったファイル名は NFD のことがある）。この場合は Move が「既にある」で失敗し、元のまま知らせが出るだけなのでデータは失わない。</td>
+<td>まず <code>File.Move(old, new)</code> を直接試す（.NET は Windows・mac で大文字小文字だけの改名を扱える。要確認：1-2 のテストを mac で、Windows 実機で 1 回）。一時名を使うなら、一覧に出る名前（例：<code>&lt;タイトル&gt; (改名中).md</code>）にして、止まっても消えないようにする。同名の判定は <code>OrdinalIgnoreCase</code> の前に NFC にそろえる（<code>Normalize</code> の最初で <code>string.Normalize(NormalizationForm.FormC)</code>）。</td></tr>
+
+<tr><td>14</td><td class="ng">中</td><td><b>⑥ 改名の知らせの出し先が計画の中で食い違っていて、計画どおりだと失敗の知らせが消える。</b>7.4 は改名の知らせを「<code>Editor.Message</code> ではなくトースト相当」（<code>docs/memo-list-plan.md:179</code>）、7.6 は「右ペインのバー（<code>Editor.Message</code>）」（<code>:210</code>）。どちらにしても、<b>改名欄からフォーカスが外れて確定 → 失敗 → 続けてクリックしたメモを開く</b>と、<code>ShowContent</code> が <code>Message = null</code> にする（<code>DocumentEditorSession.cs:145</code>）ので、失敗の理由が見えないまま消える。開いていないメモの削除に失敗したときも、出る場所が開いているメモのバー（<code>:183</code>）で、どのメモの話か分からない。</td>
+<td>一覧で起きたこと（改名の置き換え・同名・改名と削除の失敗）は<b>一覧の上に出す知らせ</b>（<code>MemoListViewModel.Notice</code>。次の一覧の操作か数秒で消える）にし、<code>Editor.Message</code> は開いているメモの読み書き（保存・読めない・チェック）に使う、と分ける。文には必ずメモの名前を入れる（「『会議』を削除できませんでした：…」）。7.4・7.6 を同じ記述にそろえ、図解 HTML も直す。</td></tr>
+
+<tr><td>15</td><td class="ng">中</td><td><b>⑥ 外で消えた・名前が変わったメモを開いたときの扱いが無い。</b>開いたときにファイルが無いと <code>Content</code> は <code>Missing</code> になり（<code>Utf8TextFile.cs:16</code>）、そのまま編集して保存すると黙って作り直す。一覧の項目は残る。改名・削除の失敗は書かれているが（<code>docs/memo-list-plan.md:180,183</code>）、開くときは無い。</td>
+<td>7.4 に「開こうとしたメモが無い：開かずに一覧から外し、知らせる（#14 の一覧の知らせ）」を足す。削除しようとしたメモが既に無い：一覧から外すだけ（<code>Delete</code> は「無いものは何もしない」なので、そのあとで外す）。</td></tr>
+
+<tr><td>16</td><td class="ng">中</td><td><b>品質ゲートと UI テストの置き換えの時期が合っていない。</b>P2 の終わり（2-4）で <code>dotnet test Todokun.slnx</code> が全部通ること（UI テスト 41 件を含む）を求める（<code>docs/memo-list-plan.md:23-24,58</code>）が、<code>MemoTabTests.cs</code> の置き換えは 3-1（<code>:114</code>）。今の UI テストはデータルート直下の <code>memo.md</code> と見出し「メモ」を前提にしている（<code>tests/Todokun.UiTests/MemoTabTests.cs:84-108</code>）。2-4 でメモが <code>memos/</code> に移り、起動時に「メモなし」になると、編集に入れず（#2）書いたファイルの場所も違うので落ちる。</td>
+<td><code>MemoTabTests.cs</code> の単一前提の行は 2-4 で直す（テストの準備で <code>memos/メモ.md</code> を作れば、見出しも「メモ」のままにできる）。3-1 では一覧のテストを足すだけにする。6 章のファイル構成の番号も直す。</td></tr>
+
+<tr><td>17</td><td class="ng">低</td><td><b>④ Delete・F2 の対象が「開いているメモ」で、キーボードで選んだ項目ではない。</b>計画は ↑↓ が効かなければ「Tab ＋ Enter で操作できることを正とする」（<code>docs/memo-list-plan.md:204</code>）。Tab で項目 B にフォーカスを移して Delete を押すと、開いている A が消える（確認ダイアログに名前が出るので、気づけば止められる）。mac のキーボードには Delete キーが無い（fn＋⌫）。</td>
+<td>フォーカスが一覧の項目にあるときは、その項目（<code>DataContext</code> の <code>MemoListItem</code>）を対象にする。それ以外は開いているメモ。mac は <code>Cmd+⌫</code> も Delete と同じに扱う（Finder と同じ）。</td></tr>
+
+<tr><td>18</td><td class="ng">低</td><td><b>④ 改名欄と検索欄のキーの受け方が書かれていない。</b>ウィンドウの Tunnel は <code>ImeProcessed</code> を捨てる（<code>MainWindow.axaml.cs:67</code>）が、改名欄・検索欄の Enter／Esc は自分の KeyDown で受ける。編集欄の Esc は「Bubble で、まだ処理されていないときだけ」にして、IME の取消の Esc を通している（<code>Views/DocumentPaneView.axaml.cs:70-78</code>）。改名欄で Tunnel を使うと、IME の変換確定の Enter で名前が確定するおそれがある（mac は <code>ImeProcessed</code> にならない場合あり。要確認）。</td>
+<td>7.5 に「改名欄・検索欄の Enter／Esc は、編集欄の Esc と同じく Bubble・<code>!e.Handled</code>・<code>ImeProcessed</code> を除く」と書く。変換中にフォーカスが外れたときは、確定前の文字を含めない（Avalonia が確定してから LostFocus を出すかは要確認。Windows 実機の項目に足す）。</td></tr>
+
+<tr><td>19</td><td class="ng">低</td><td><b>⑥ 抜粋の「緩く読む」と「（読めません）」が両立しない。4 KB で切ると UTF-8 の途中で切れる。</b>7.2 は「不正なバイトは <code>?</code> で置き換える」と「UTF-8 として読めない本文は『（読めません）』」を両方書いている（<code>docs/memo-list-plan.md:144</code>）。緩く読むと、読めないかどうかが分からない。4 KB ちょうどで切ると、正しいファイルでも最後の文字が途中で切れて、厳しく読むと「読めない」になる。</td>
+<td>厳しい <code>Decoder</code> に <code>flush: false</code> で 4 KB を渡す（最後の途中の文字は持ち越されて誤判定しない）。例外なら「（読めません）」、BOM は飛ばす。「緩く」の 1 文は消す。</td></tr>
+
+<tr><td>20</td><td class="ng">低</td><td><b>① 改名した後の見出しとプレビューの更新が書かれていない。</b><code>HeaderText</code> は基底では通知されない（<code>DocumentEditorSession.cs:76</code>。日は <code>OnDayChanged</code> で通知している <code>DayEditorSession.cs:28-32</code>）。画面は <code>Editor.HeaderText</code> に結び付いている（<code>Views/DocumentPaneView.axaml:11</code>）。ビューのときは、プレビューのページの場所（<code>CacheKey</code>）も古いまま。</td>
+<td>2-2 の <code>RenameTo</code> に「<code>HeaderText</code> と <code>Title</code> を通知する。ビューのときは <code>ContentChanged(true)</code> で作り直す（編集中は何もしない）」と書く。<code>_generation</code> は増やさない（確認ダイアログ中に改名されても、保存は新しい名前に書けばよい）—この点は計画どおりで正しい。</td></tr>
+</table>
+
+<h3>引き継ぎ（#1）を直した後の流れ</h3>
+<svg viewBox="0 0 960 270" width="960" font-size="13" font-family="sans-serif">
+<rect x="10" y="20" width="150" height="50" fill="#ffe9c8" stroke="#a70"/>
+<text x="18" y="42" font-weight="bold">起動</text><text x="18" y="60" font-size="12">データルートが書ける</text>
+<rect x="200" y="20" width="170" height="50" fill="#dff" stroke="#08a"/>
+<text x="208" y="42" font-weight="bold">memo.md がある？</text><text x="208" y="60" font-size="12">memos/ の有無は見ない</text>
+<rect x="410" y="20" width="230" height="50" fill="#dff" stroke="#08a"/>
+<text x="418" y="42" font-weight="bold">memos/ に同じバイト列？</text><text x="418" y="60" font-size="12">前回コピー済みかを中身で判定</text>
+<rect x="690" y="20" width="260" height="50" fill="#dfd" stroke="#383"/>
+<text x="698" y="42" font-weight="bold">はい → memo.md を消すだけ</text><text x="698" y="60" font-size="12">消せなければ知らせる（次回も同じ）</text>
+<rect x="410" y="110" width="230" height="60" fill="#dfd" stroke="#383"/>
+<text x="418" y="132" font-weight="bold">いいえ → .tmp に書く</text><text x="418" y="152" font-size="12">→ File.Move（上書きなし）</text>
+<rect x="690" y="110" width="260" height="60" fill="#dfd" stroke="#383"/>
+<text x="698" y="132" font-size="12">成功：memo.md を消す</text><text x="698" y="152" font-size="12">失敗：.tmp を消し memo.md は残す</text>
+<line x1="160" y1="45" x2="200" y2="45" stroke="#333" marker-end="url(#a)"/>
+<line x1="370" y1="45" x2="410" y2="45" stroke="#333" marker-end="url(#a)"/>
+<text x="376" y="38" font-size="11" fill="#555">ある</text>
+<text x="208" y="92" font-size="12" fill="#555">無い → 何もしない</text>
+<line x1="640" y1="45" x2="690" y2="45" stroke="#383" stroke-width="2" marker-end="url(#a)"/>
+<line x1="525" y1="70" x2="525" y2="110" stroke="#333" marker-end="url(#a)"/>
+<line x1="640" y1="140" x2="690" y2="140" stroke="#333" marker-end="url(#a)"/>
+<rect x="10" y="195" width="940" height="60" fill="#fde" stroke="#b33"/>
+<text x="18" y="216" fill="#b33" font-weight="bold">計画の穴（#1）</text>
+<text x="18" y="236" font-size="12">コピー失敗 → 起動を続けて「＋」→ memos/ ができる → 次の起動は「memos/ がある」ので何もしない → memo.md は残るが、一覧に二度と出ない。</text>
+<text x="18" y="252" font-size="12">上の流れなら、どの段で止まっても次の起動でやり直せる。二重に作らない（同じバイト列なら作らない）。</text>
+</svg>
+
+<h2>4. 問題なしの観点</h2>
+<ul>
+<li><span class="ok">OK</span> ① TODO の空保存：<code>DeleteWhenBlank</code> の既定を true にして <code>DayEditorSession</code> を触らなければ、分岐は今と同じ（<code>DocumentEditorSession.cs:214-249</code>）。確認・<code>_generation</code> の確認・削除の失敗で <code>Content</code> を変えない、もそのまま。メモの空保存のテスト（<code>MemoEditorSessionTests.cs:94,107</code>）は 2-1 では <code>MemoEditorSession</code> がまだ既定の true なので通り、2-2 で置き換える計画とも合う。</li>
+<li><span class="ok">OK</span> ① <code>IsDirty</code>・<code>LeaveEditAsync</code>：空で書いた結果は <code>SaveResult.Saved</code> になり、<code>LeaveEditAsync</code> の「保存」分岐（<code>:363-369</code>）がそのまま受ける。</li>
+<li><span class="ok">OK</span> ② <code>memos/</code> の中身は日の走査に混ざらない：<code>DayIndex</code> は全部の <code>*.md</code> を回すが（<code>DayIndex.cs:15</code>）、<code>DayFile.TryParse</code> は年/月/日の 3 階層だけを受ける。<code>memos/2026-10-14.md</code> という名前のメモでも日にならない。</li>
+<li><span class="ok">OK</span> ② 一時ファイルの名前：<code>AtomicFile</code> の一時名は <code>&lt;名前&gt;.md.&lt;guid&gt;.tmp</code>、置き換え失敗の残りは <code>~RF*.TMP</code>（<code>AtomicFile.cs:24,62</code>）。7.2 の「<code>.md</code> で終わらない名前は無視」で両方とも一覧に出ない。</li>
+<li><span class="ok">OK</span> ② 普段の二重起動：同じデータルートでは <code>SingleInstance</code> が 2 つ目を止める（<code>AppStartup.cs:33-35</code>）。引き継ぎは 1-3 の計画どおり <code>AppStartup</code> の中、書けるか確かめた後に置けば、2 つ目では走らない。</li>
+<li><span class="ok">OK</span> ③ 選択を変えるのは確認が通った後（<code>OpenDayAsync</code> の <code>TryOpenDayAsync</code> → <code>Cursor.Show</code>、<code>MainViewModel.cs:108-109</code>）、という流儀を 7.4 がそのまま写している。キャンセル・保存の失敗で選択を変えない、確認中は何もしない、も同じ。改名で <code>_generation</code> を増やさない判断も、保存先が新しい名前になるだけなので正しい。</li>
+<li><span class="ok">OK</span> ④ 既存のキー：足すキーはメモタブのときだけ扱うので、TODO タブの ←→・Ctrl+E（<code>MainViewModel.cs:172-182</code>）は変わらない。編集欄の Enter（編集補助、<code>DocumentPaneView.axaml.cs:104</code>）と Esc（<code>:73</code>）は編集欄の中のことで、ウィンドウの Tunnel の Delete・F2 は「TextBox なら食わない」ので衝突しない。Ctrl+N を編集欄でも効かせるのは、要件の「Ctrl+N で追加」と合う。</li>
+<li><span class="ok">OK</span> ⑥ 保存の失敗：<code>Content</code>・<code>Base</code> を変えず、編集に留まる（<code>DocumentEditorSession.cs:198-202</code>）ので、入力は失わない。読めないメモは編集に入れない（<code>:156-160</code>）のも今のまま。どちらも開いているメモの話なので、<code>Editor.Message</code> が出し先として正しい。</li>
+</ul>
+
+<h2>5. 計画で決めたこと（9 章）について</h2>
+<table>
+<tr><th style="width:26%">決めごと</th><th style="width:10%">判定</th><th>所見と提案</th></tr>
+<tr><td>起動時は一覧の先頭（最後に保存したメモ）を開く（<code>docs/memo-list-plan.md:244</code>）</td><td class="ng">要件と違う</td><td>要件（<code>memo-list-requirements.md:91</code>）とデザイン案は「最後に<b>開いていた</b>メモ」。「更新順なら先頭がほぼ同じ」という理由は弱い：読むだけ（ビュー）では更新日時が変わらないので、毎日「コマンド集」を<b>見る</b>人は、最後に<b>書いた</b>「買い物」で毎回起動することになる。逆に、チェックボックスを 1 つ押しただけで先頭が変わる。保存先は新しく要るが、<code>cache/</code>（マシンごと・消してよい場所。<code>todo-requirements.md:39</code>）に名前 1 行を書くだけで足り、読めなければ先頭に戻せばよいので小さい。下の Q1。</td></tr>
+<tr><td>名前変更でフォーカスが外れたら確定（<code>:245</code>）</td><td class="ok">妥当</td><td>要件は「Enter 確定・Esc 取消」だけで、外れたときは決めていない。打った文字を失わない方を取るのは、要件の「止められたくない」に合う。ただし #8（二重の確定・他の操作との順番）と #18（変換中の文字）を決めること。デザイン案の HTML を 4-1 で揃えるのも計画どおりでよい。</td></tr>
+<tr><td>先頭の <code>.</code> を取る（<code>:247</code>）</td><td class="ok">妥当</td><td>走査が <code>.</code> 始まりを無視する以上、取らないとメモが一覧から消えるので必要。要件の「振る舞いの詳細」への追記（4-1）と、置き換えたときの知らせ（「『.env』→『env』にしました」）を忘れないこと。外で作った <code>.</code> 始まりのファイルが出ないことは README に 1 行。</td></tr>
+<tr><td>未保存で「＋」を押したら確認（<code>:251</code>）</td><td class="ok">妥当</td><td>別のメモへ移るときと同じ確認なので、覚えることが増えない。デザイン案（トーストだけ）より安全。#8 の「作ったらすぐ開く」形にすると、「確認 → 作る → 開く」が 1 本の流れになる。</td></tr>
+<tr><td>開いているメモの削除で、未保存の入力は確認なしに捨てる（<code>:252</code>）</td><td class="ok">条件付き</td><td>削除の確認が 1 回出るので、2 回聞かないのはよい。未保存の変更があるときだけ、確認の文に「保存していない変更も失われます」を足すと誤解が無い。</td></tr>
+<tr><td>引き継ぐ名前は「メモ」、同名なら「メモ (2)」（<code>:248</code>）</td><td class="ok">妥当</td><td>今の条件（<code>memos/</code> が無いときだけ動く）では同名は起きないので、「(2)」の記述は死んでいる。#1 の直し方にすると意味を持つ。</td></tr>
+<tr><td>名前変更で更新日時を変えない・左ペインの幅を保存しない・グループ分けなし・ゴミ箱なし</td><td class="ok">妥当</td><td>要件の Open Questions 1〜3 の決着として筋が通っている。4-1 で要件に書き戻すこと。</td></tr>
+</table>
+
+<h2>6. 決めたいこと</h2>
+<div class="q"><b>Q1. 起動時に開くメモ</b><br>
+A) 最後に開いていたメモを <code>cache/</code> に 1 行で覚える（読めない・無ければ先頭）… 利点：要件どおり。見るだけのメモでも戻れる／欠点：小さな保存先が 1 つ増える（2-4 に 1 コミット分）<br>
+B) 計画どおり先頭（最後に保存したメモ）… 利点：保存先が増えない／欠点：要件と違う。要件を 4-1 で書き換える必要がある<br>
+<span class="rec">推奨：A</span>（手間が小さく、要件とデザイン案の両方に合う。データルートではなく <code>cache/</code> なので同期フォルダを汚さない）</div>
+
+<div class="q"><b>Q2. WebView にフォーカスがあるときの Ctrl/Cmd+N・F（#3）</b><br>
+A) 両 OS で効かせる（mac は届いたキーを使う、Windows はページから転送。重複は短い間で捨てる）… 利点：要件どおり、ビューを読みながら追加・検索できる／欠点：<code>KeyForwarderScript</code>・<code>PageKey</code> を触る。Windows 実機の確認が要る<br>
+B) 効かせない（計画どおり）… 利点：変更が少ない／欠点：本文をクリックした後は毎回、一覧をクリックし直す必要がある。要件に例外を書く<br>
+<span class="rec">推奨：A</span></div>
+
+<div class="q"><b>Q3. データルートが書けないときの古いメモ（7.3）</b><br>
+A) 計画どおり、知らせるだけで表示しない<br>
+B) <code>memo.md</code> を読み取り専用の 1 項目として一覧に出す（引き継ぎはしない）… TODO が「閲覧はできます」（<code>AppStartup.cs:51</code>）なのとそろう／一覧に特別な項目が 1 つ増える<br>
+<span class="rec">推奨：A</span>（まれな場面で、データは失わない。B は使われてから考えればよい）</div>
+
+<div class="sync"><b>反映先</b>：直すのは <code>docs/memo-list-plan.md</code> と <code>docs/memo-list-plan.html</code>（対で同じ内容に）。#4 の順番は 4-1 で <code>memo-list-requirements.md</code> の「振る舞いの詳細」にも。#3 で転送を足すなら <code>todo-requirements.md</code> の 11 章のキー表にも。</div>
+</body></html>

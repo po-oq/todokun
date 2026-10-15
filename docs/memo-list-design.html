@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>todokun メモ複数化 デザイン案</title>
+<style>
+:root{
+  --bg:#fff;--fg:#222;--muted:#777;--line:#d6d6d6;--pane:#f7f7f8;--sel:#e3eefc;--selline:#0b63c5;--hover:#ececef;
+  --accent:#0b63c5;--danger:#c0392b;--warn:#fff6dd;--warnline:#e0c060;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#1e1f22;--fg:#e4e4e6;--muted:#9a9aa0;--line:#3a3b3f;--pane:#26272b;--sel:#1f3552;--selline:#5aa2f0;--hover:#32333a;
+  --accent:#5aa2f0;--danger:#ef7b6e;--warn:#3a3320;--warnline:#8a7430;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.65 "Yu Gothic UI","Hiragino Sans",system-ui,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:17px;border-left:5px solid var(--accent);padding-left:8px;margin:36px 0 8px}
+h3{font-size:14.5px;margin:16px 0 4px}
+p{margin:6px 0}
+.muted{color:var(--muted)}
+.rec{color:#c05000;font-weight:700}
+@media (prefers-color-scheme:dark){.rec{color:#ffa860}}
+code{background:var(--pane);border:1px solid var(--line);padding:0 4px;border-radius:3px;font-size:12.5px}
+table{border-collapse:collapse;width:100%;margin:8px 0}
+td,th{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top;font-size:13.5px}
+th{background:var(--pane)}
+.note{background:var(--warn);border:1px solid var(--warnline);padding:6px 14px;margin:10px 0;border-radius:4px}
+
+/* ---- アプリ枠 ---- */
+.app{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg);height:520px;display:flex;flex-direction:column;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.tabbar{display:flex;gap:2px;padding:6px 8px 0;background:var(--pane);border-bottom:1px solid var(--line)}
+.tab{padding:5px 18px;border:1px solid transparent;border-bottom:none;border-radius:5px 5px 0 0;color:var(--muted);cursor:default}
+.tab.on{background:var(--bg);border-color:var(--line);color:var(--fg);font-weight:700;position:relative;top:1px}
+.body{flex:1;display:flex;min-height:0}
+
+/* 左ペイン */
+.side{width:250px;flex:none;border-right:1px solid var(--line);background:var(--pane);display:flex;flex-direction:column;min-height:0}
+.side-head{display:flex;align-items:center;gap:6px;padding:8px 8px 6px}
+.side-head .ttl{font-weight:700;flex:1}
+.btn{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:4px;padding:3px 10px;font:inherit;cursor:pointer}
+.btn:hover{background:var(--hover)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--danger)}
+.btn.icon{padding:2px 8px;font-weight:700}
+.search{margin:0 8px 6px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);font:inherit;width:calc(100% - 16px)}
+.list{flex:1;overflow:auto;padding:0 4px 8px;margin:0;list-style:none}
+.item{position:relative;padding:6px 8px 6px 10px;margin:1px 0;border-radius:4px;border-left:3px solid transparent;cursor:default;user-select:none}
+.item:hover{background:var(--hover)}
+.item.sel{background:var(--sel);border-left-color:var(--selline)}
+.item .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:26px}
+.item .s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .dirty{color:var(--danger)}
+.item .x{position:absolute;right:6px;top:7px;display:none;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:3px;padding:0 5px;font-size:14px}
+.item:hover .x,.item.sel .x{display:block}
+.item .x:hover{background:var(--line);color:var(--danger)}
+.item input{width:100%;font:inherit;font-weight:600;border:1px solid var(--accent);border-radius:3px;padding:1px 4px;background:var(--bg);color:var(--fg);outline:none}
+.item .err{font-size:11.5px;color:var(--danger)}
+.empty{padding:20px 12px;color:var(--muted);text-align:center}
+.splitter{width:6px;flex:none;background:var(--line);opacity:.5}
+
+/* 右ペイン */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.bar{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--line)}
+.bar .name{font-weight:700;font-size:15px;cursor:text;border-radius:3px;padding:0 4px;min-width:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .name:hover{background:var(--hover)}
+.bar .name input{font:inherit;font-weight:700;border:1px solid var(--accent);border-radius:3px;background:var(--bg);color:var(--fg);outline:none;padding:0 4px;width:240px}
+.bar .sp{flex:1}
+.bar .mode{color:var(--muted);font-size:12.5px}
+.badge{color:var(--danger);font-size:12.5px;font-weight:700}
+.view,.edit{flex:1;overflow:auto;padding:14px 22px}
+.edit textarea{width:100%;height:100%;border:none;outline:none;resize:none;background:transparent;color:var(--fg);font:13.5px/1.6 "Cascadia Mono",Consolas,monospace;padding:0}
+.view h1{font-size:20px;border-bottom:1px solid var(--line);padding-bottom:4px;margin-top:0}
+.view h2{border:none;padding:0;margin:16px 0 4px;font-size:16px}
+.view ul{padding-left:22px;margin:4px 0}
+.view li.chk{list-style:none;margin-left:-18px}
+.view pre{background:var(--pane);border:1px solid var(--line);padding:8px;border-radius:4px;overflow:auto}
+
+/* 確認ダイアログ */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center}
+.scrim.on{display:flex}
+.dlg{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:16px 18px;width:340px;box-shadow:0 8px 28px rgba(0,0,0,.3)}
+.dlg h4{margin:0 0 6px;font-size:15px}
+.dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.app{position:relative}
+.toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#333;color:#fff;padding:6px 14px;border-radius:5px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:.95}
+
+/* 静的な小図 */
+.alts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:10px 0}
+.alt{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--pane)}
+.alt h3{margin-top:0}
+.mini{border:1px solid var(--line);background:var(--bg);border-radius:4px;padding:6px;margin:6px 0;font-size:12.5px}
+.mini .r{padding:3px 6px;border-radius:3px;display:flex;justify-content:space-between}
+.mini .r.sel{background:var(--sel)}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 5px;font-size:12px;background:var(--pane)}
+</style></head>
+<body><div class="wrap">
+
+<h1>todokun メモ複数化 デザイン案</h1>
+<p class="muted">状態：<b>案（未確定）</b>。ゴール：メモタブを「左にメモの一覧、右に今と同じビュー／編集」にして、メモの追加・削除・タイトル修正の操作感を実装前に合わせる。</p>
+
+<h2>1. 触れる画面イメージ（これが推奨案）</h2>
+<p>実際に操作できます。<b>＋</b>で追加、一覧をダブルクリック（または選択して <kbd>F2</kbd>）／右上のタイトルをクリックで名前変更、<b>✕</b>または <kbd>Delete</kbd> で削除、右のビュー／編集は今のメモタブと同じです。</p>
+
+<div class="app" id="app">
+  <div class="tabbar"><div class="tab">TODO</div><div class="tab on">メモ</div></div>
+  <div class="body">
+    <div class="side">
+      <div class="side-head"><span class="ttl">メモ</span><span class="muted" id="count"></span><button class="btn icon pri" id="add" title="新しいメモ (Ctrl+N)">＋</button></div>
+      <input class="search" id="q" placeholder="🔍 絞り込み（タイトル・本文）">
+      <ul class="list" id="list"></ul>
+    </div>
+    <div class="splitter"></div>
+    <div class="main">
+      <div class="bar">
+        <span class="name" id="name" title="クリックで名前を変更"></span>
+        <span class="badge" id="dirty" hidden>● 未保存</span>
+        <span class="sp"></span>
+        <span class="mode" id="mode">ビュー</span>
+        <button class="btn" id="toggle">✎ 編集</button>
+        <button class="btn pri" id="save" hidden>保存</button>
+        <button class="btn" id="back" hidden>ビューに戻る</button>
+      </div>
+      <div class="view" id="view"></div>
+      <div class="edit" id="edit" hidden><textarea id="ta" spellcheck="false"></textarea></div>
+    </div>
+  </div>
+  <div class="scrim" id="scrim"><div class="dlg" id="dlg"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+<p class="muted" style="margin-top:6px">※ 画面内のデータはこのページ内だけ（保存されません）。ダーク／ライトは OS 設定に追従。</p>
+
+<h2>2. 操作の決めごと（案）</h2>
+<table>
+<tr><th style="width:150px">操作</th><th>動き</th></tr>
+<tr><td>追加</td><td>左上の <b>＋</b> または <kbd>Ctrl+N</kbd>。一覧の先頭に「無題のメモ」ができ、<b>その場でタイトルが入力状態</b>になる。<kbd>Enter</kbd> で確定すると右ペインが<b>編集モード</b>で開く（すぐ書き始められる）。何も書かず離れたら残る（空メモも 1 件として存在。空のまま保存＝削除は日ファイルと同じ流儀にするかは要相談）。</td></tr>
+<tr><td>タイトル修正</td><td>3 通り：一覧をダブルクリック／選択して <kbd>F2</kbd>／右ペイン上部のタイトルをクリック。<kbd>Enter</kbd> 確定・<kbd>Esc</kbd> 取消。同名は「(2)」を付けて逃がす。ファイル名に使えない文字は<b>入力を止めず、確定時に全角へ置き換えて</b>小さく知らせる（「A/B」→「A／B」。対応表は 4 章）。</td></tr>
+<tr><td>削除</td><td>行にホバーで出る <b>✕</b>、または選択して <kbd>Delete</kbd>。<b>確認ダイアログ</b>（「『◯◯』を削除します。元に戻せません」）。削除後は隣のメモを選ぶ。0 件になったら「メモがありません。＋で追加」の空状態。</td></tr>
+<tr><td>切り替え</td><td>一覧クリックで右ペインが切り替わる。編集中・未保存なら今と同じ「保存／破棄／キャンセル」の確認を出してから移る。</td></tr>
+<tr><td>並び順</td><td><b>更新が新しい順</b>。迷子にならない／「最近触ったメモが上」で、並べ替え操作（ドラッグ）が要らない。</td></tr>
+<tr><td>絞り込み</td><td>検索ボックスでタイトル・本文を絞り込み（件数が増えたとき用）。<kbd>Ctrl+F</kbd> でフォーカス。</td></tr>
+<tr><td>一覧の 2 行目</td><td>本文の最初の 1 行（見出し記号は除く）＋更新日。何のメモか開かずに分かる。</td></tr>
+<tr><td>起動時</td><td>最後に開いていたメモ（無ければ先頭）を選んで表示。TODO タブとの切り替えでも選択は保つ。</td></tr>
+<tr><td>今の memo.md</td><td>初回起動で「メモ」というタイトルのメモとして引き継ぐ（データを失わない）。</td></tr>
+</table>
+
+<h2>3. 分かれ道（ここが決めどころ）</h2>
+
+<div class="alts">
+<div class="alt">
+  <h3>A. タイトルの持ち方 <span class="rec">← 推奨：ファイル名＝タイトル</span></h3>
+  <div class="mini"><div class="r">data/memos/<b>買い物.md</b></div><div class="r">data/memos/<b>会議メモ.md</b></div></div>
+  <p><b>メリット</b>：エクスプローラーで見て分かる・バックアップ／同期しやすい。タイトル変更＝ファイル名変更で、本文に触れない。今の <code>data/</code> 方針（人が読める素の Markdown）と一貫。<br><b>デメリット</b>：同名・禁則文字を扱う必要がある（「(2)」と全角置換で対応。4 章）。</p>
+  <p class="muted">対案：本文の最初の <code># 見出し</code> をタイトルにする。名前変更 UI が要らず簡単だが、「タイトルだけ直したい」が本文編集になり、見出しを書かないメモは「無題」だらけになる。</p>
+</div>
+<div class="alt">
+  <h3>B. 削除の見せ方 <span class="rec">← 推奨：ホバー✕＋確認</span></h3>
+  <div class="mini"><div class="r sel"><span>買い物</span><span>✕</span></div><div class="r"><span>会議メモ</span><span></span></div></div>
+  <p>タッチ・マウスどちらでも迷わず、<kbd>Delete</kbd> キーでも消せる。確認ダイアログは今の「空にして保存すると削除（確認が出る）」と同じ流儀。</p>
+  <p class="muted">対案：右クリックメニュー（名前変更／削除）に隠す。見た目はすっきりするが発見しづらい。→ 右クリックは<b>併用</b>で足してもよい。</p>
+</div>
+<div class="alt">
+  <h3>C. 左ペインの置き方 <span class="rec">← 推奨：TODO タブと同じ配置</span></h3>
+  <div class="mini"><div class="r">［TODO］<b>［メモ］</b></div><div class="r">左：メモ一覧　｜　右：ビュー／編集</div></div>
+  <p>上のタブは今のまま。メモタブを開くと左にメモ一覧が出る＝TODO タブと同じ構成なので学習コストが無い。幅はドラッグで変更（TODO タブと別々に覚える）。</p>
+  <p class="muted">対案：タブを廃止して 1 つのサイドバーに「TODO／メモ」を混在。大改造になるので今回は見送り。</p>
+</div>
+</div>
+
+<h2>4. タイトルのファイル名ルール（決定：自動で置換して通す）</h2>
+<p>入力は拒否しない。確定時に次のとおり正規化し、変わったときだけトーストで「『A/B』→『A／B』にしました」と知らせる。</p>
+<table>
+<tr><th style="width:200px">入力</th><th>扱い</th></tr>
+<tr><td><code>\ / : * ? " &lt; &gt; |</code></td><td>全角に置換：<code>＼ ／ ： ＊ ？ ” ＜ ＞ ｜</code></td></tr>
+<tr><td>制御文字（改行・タブなど）</td><td>半角スペースに置換</td></tr>
+<tr><td>前後の空白、末尾の <code>.</code></td><td>取り除く（Windows が許さない）</td></tr>
+<tr><td>空になった／空白だけ</td><td>確定せず元のタイトルのまま（新規なら「無題のメモ」）</td></tr>
+<tr><td>予約名（<code>CON</code> <code>NUL</code> <code>COM1</code> など）</td><td>末尾に <code>_</code> を付ける</td></tr>
+<tr><td>長さ</td><td>100 文字で切る</td></tr>
+<tr><td>同名（大文字小文字は同一扱い）</td><td>「(2)」「(3)」…を付ける</td></tr>
+<tr><td><code>.md</code></td><td>タイトルには含めず、保存時に付ける（入力の末尾 <code>.md</code> は取る）</td></tr>
+</table>
+
+<h2>5. 実装に効く論点（メモ）</h2>
+<ul>
+<li>現状 <code>MemoStore</code> は <code>data/memo.md</code> を 1 つだけ扱う。複数化では <code>data/memos/*.md</code> を走査する <code>MemoIndex</code>（日ファイルの <code>DayIndex</code> 相当）が必要。</li>
+<li>日ファイルの走査に混ざらない点は <code>data/memos/</code> が 3 階層規則（年/月/日）に当たらないので問題なし。</li>
+<li>右ペインは既存の <code>DocumentPaneView</code>（<code>IDocumentPane</code>）をそのまま使い回せる。切り替え時の未保存確認も既存の仕組み。</li>
+<li>名前変更はファイルの <code>Move</code>（上書き禁止）。AtomicFile の置き換え方式と併せて、失敗時は元の名前に戻す。</li>
+<li>Native AOT のため、一覧の <code>DataTemplate</code> には <code>x:DataType</code> を付ける（README の注意）。</li>
+</ul>
+
+<div class="note"><b>決定済み</b>：タイトル＝ファイル名／禁則文字は全角置換／空メモ（タイトルだけ）は残す／並びは更新順（ピン留めは初回は入れない。要るとなったら <code>.pins</code> ファイル方式で後から足す）</div>
+
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let seq=1, now=Date.now();
+const mk=(title,body,ago)=>({id:seq++,title,body,saved:body,mtime:now-ago});
+let memos=[
+  mk("買い物","# 買い物\n\n- [ ] 牛乳\n- [x] 卵\n- [ ] 電池（単3）\n",3600e3),
+  mk("会議メモ 10/14","# 会議メモ\n\n## 決まったこと\n\n- メモを複数持てるようにする\n- 左ペインに一覧\n\n## 宿題\n\n- [ ] デザイン案を作る\n",86400e3),
+  mk("コマンド集","# コマンド集\n\n```\ndotnet test Todokun.slnx\n```\n",5*86400e3),
+  mk("メモ","# メモ\n\n今までの memo.md の内容はここに引き継がれる。\n",20*86400e3),
+];
+let selId=memos[0].id, editing=false, renamingId=null, q="";
+
+const ago=ms=>{const m=ms/6e4;if(m<1)return"たった今";if(m<60)return Math.floor(m)+"分前";const h=m/60;if(h<24)return Math.floor(h)+"時間前";return Math.floor(h/24)+"日前"};
+const first=b=>{for(const l of b.split("\n")){const t=l.replace(/^#+\s*/,"").replace(/^- \[[ x]\]\s*/,"").trim();if(t&&!t.startsWith("```"))return t}return"（空）"};
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const cur=()=>memos.find(m=>m.id===selId);
+const dirty=m=>m&&m.body!==m.saved;
+const MAP={"\\":"＼","/":"／",":":"：","*":"＊","?":"？",'"':"”","<":"＜",">":"＞","|":"｜"};
+const RESERVED=/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+function sanitize(raw){
+  let n=raw.replace(/[\x00-\x1f]/g," ").replace(/[\\/:*?"<>|]/g,c=>MAP[c]);
+  n=n.replace(/\.md$/i,"").trim().replace(/[. ]+$/,"").slice(0,100);
+  if(RESERVED.test(n))n+="_";
+  return n;
+}
+function uniq(name,id){let n=name,i=2;while(memos.some(m=>m.id!==id&&m.title===n))n=name+" ("+i++ +")";return n}
+function toast(s){const t=$("toast");t.textContent=s;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("on"),1600)}
+
+function md(src){
+  let out="",inCode=false;
+  for(const l of src.split("\n")){
+    if(l.startsWith("```")){out+=inCode?"</pre>":"<pre>";inCode=!inCode;continue}
+    if(inCode){out+=esc(l)+"\n";continue}
+    let m;
+    if(m=l.match(/^# (.*)/))out+="<h1>"+esc(m[1])+"</h1>";
+    else if(m=l.match(/^## (.*)/))out+="<h2>"+esc(m[1])+"</h2>";
+    else if(m=l.match(/^- \[( |x)\] (.*)/))out+='<ul><li class="chk">'+(m[1]==="x"?"☑ ":"☐ ")+esc(m[2])+"</li></ul>";
+    else if(m=l.match(/^- (.*)/))out+="<ul><li>"+esc(m[1])+"</li></ul>";
+    else if(l.trim())out+="<p>"+esc(l)+"</p>";
+  }
+  return out||'<p class="muted">（空のメモ。✎ 編集で書き始める）</p>';
+}
+
+function render(){
+  const list=$("list");list.innerHTML="";
+  const shown=[...memos].sort((a,b)=>b.mtime-a.mtime).filter(m=>!q||(m.title+m.body).toLowerCase().includes(q.toLowerCase()));
+  $("count").textContent=memos.length+"件";
+  if(!shown.length){list.innerHTML='<li class="empty">'+(memos.length?"一致するメモがありません":"メモがありません。<br>右上の ＋ で追加")+"</li>"}
+  for(const m of shown){
+    const li=document.createElement("li");li.className="item"+(m.id===selId?" sel":"");
+    if(m.id===renamingId){
+      li.innerHTML='<input id="ri" value="'+esc(m.title)+'"><div class="err" id="re"></div>';
+    }else{
+      li.innerHTML='<div class="t">'+(dirty(m)?'<span class="dirty">● </span>':"")+esc(m.title)+'</div><div class="s">'+esc(first(m.body))+" · "+ago(now-m.mtime)+'</div><button class="x" title="削除 (Delete)">✕</button>';
+      li.onclick=e=>{if(e.target.classList.contains("x")){askDelete(m.id);return}select(m.id)};
+      li.ondblclick=()=>startRename(m.id);
+    }
+    list.appendChild(li);
+  }
+  const c=cur();
+  $("name").textContent=c?c.title:"（メモなし）";
+  $("dirty").hidden=!dirty(c);
+  $("view").hidden=editing||!c;$("edit").hidden=!editing||!c;
+  $("mode").textContent=editing?"編集":"ビュー";
+  $("toggle").hidden=editing||!c;$("save").hidden=!editing;$("back").hidden=!editing;
+  if(c){ $("view").innerHTML=md(c.body); if(editing&&document.activeElement!==$("ta"))$("ta").value=c.body; }
+  else $("view").innerHTML='<div class="empty">メモがありません。左上の ＋ で追加できます。</div>', $("view").hidden=false;
+  if(renamingId){const i=$("ri");if(i){i.focus();i.select();wireRename(i)}}
+}
+
+function wireRename(i){
+  const id=renamingId;
+  i.onkeydown=e=>{
+    if(e.key==="Escape"){renamingId=null;render()}
+    if(e.key==="Enter"){
+      const m=memos.find(x=>x.id===id),v=i.value,n=sanitize(v);
+      if(!n){renamingId=null;render();toast("タイトルが空のため、元の名前のままです");return}
+      const u=uniq(n,id);
+      m.title=u;m.mtime=Date.now();renamingId=null;
+      if(u!==v.trim())toast("「"+v.trim()+"」→「"+u+"」にしました");
+      render();
+    }
+    e.stopPropagation();
+  };
+  i.oninput=()=>{const n=sanitize(i.value);$("re").textContent=n&&n!==i.value.trim()?"→ 「"+n+"」で保存されます":""};
+  i.onblur=()=>{if(renamingId===id)i.onkeydown({key:"Enter",stopPropagation(){}})};
+}
+function startRename(id){selId=id;renamingId=id;render()}
+
+function dialog(html,buttons){
+  $("dlg").innerHTML=html+'<div class="row"></div>';
+  const row=$("dlg").querySelector(".row");
+  for(const [label,cls,fn] of buttons){const b=document.createElement("button");b.className="btn "+cls;b.textContent=label;b.onclick=()=>{$("scrim").classList.remove("on");fn&&fn()};row.appendChild(b)}
+  $("scrim").classList.add("on");
+}
+function select(id){
+  if(id===selId)return;
+  const c=cur();
+  if(editing&&dirty(c)){
+    dialog("<h4>未保存の変更があります</h4><p>「"+esc(c.title)+"」を保存しますか？</p>",[
+      ["キャンセル","",null],["破棄","danger",()=>{c.body=c.saved;editing=false;selId=id;render()}],["保存","pri",()=>{save();editing=false;selId=id;render()}]]);
+    return;
+  }
+  editing=false;selId=id;render();
+}
+function save(){const c=cur();c.body=$("ta").value;c.saved=c.body;c.mtime=Date.now();toast("保存しました")}
+function askDelete(id){
+  const m=memos.find(x=>x.id===id);
+  dialog("<h4>メモを削除</h4><p>「"+esc(m.title)+"」を削除します。<br>元に戻せません。</p>",[
+    ["キャンセル","",null],["削除","danger",()=>{
+      const sorted=[...memos].sort((a,b)=>b.mtime-a.mtime),i=sorted.findIndex(x=>x.id===id);
+      memos=memos.filter(x=>x.id!==id);
+      if(selId===id){editing=false;const n=sorted.filter(x=>x.id!==id);selId=n.length?n[Math.min(i,n.length-1)].id:null}
+      render();toast("削除しました");}]]);
+}
+function add(){
+  if(editing&&dirty(cur())){toast("先に保存か破棄をしてください");return}
+  const t=uniq("無題のメモ",0);
+  const m={id:seq++,title:t,body:"",saved:"",mtime:Date.now()};
+  memos.unshift(m);selId=m.id;editing=false;q="";$("q").value="";
+  renamingId=m.id;render();
+}
+$("add").onclick=add;
+$("toggle").onclick=()=>{editing=true;render();$("ta").value=cur().body;$("ta").focus()};
+$("back").onclick=()=>{const c=cur();
+  if(dirty(c)){dialog("<h4>未保存の変更があります</h4><p>保存しますか？</p>",[["キャンセル","",null],["破棄","danger",()=>{c.body=c.saved;editing=false;render()}],["保存","pri",()=>{save();editing=false;render()}]])}
+  else{editing=false;render()}};
+$("save").onclick=()=>{save();render()};
+$("ta").oninput=()=>{const c=cur();c.body=$("ta").value;render()};
+$("name").onclick=()=>{if(cur())startRename(cur().id)};
+$("q").oninput=e=>{q=e.target.value;render()};
+document.addEventListener("keydown",e=>{
+  if(renamingId||$("scrim").classList.contains("on"))return;
+  if(e.target===$("ta")){
+    if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();save();render();$("ta").focus()}
+    if(e.key==="Escape"){$("back").click()}
+    return;
+  }
+  if(e.target===$("q"))return;
+  if((e.ctrlKey||e.metaKey)&&e.key==="n"){e.preventDefault();add()}
+  if(e.key==="F2"&&cur())startRename(cur().id);
+  if(e.key==="Delete"&&cur())askDelete(cur().id);
+});
+render();
+</script>
+</body></html>
