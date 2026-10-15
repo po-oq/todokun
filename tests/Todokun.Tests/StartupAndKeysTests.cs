@@ -39,6 +39,46 @@ public sealed class AppStartupTests : IDisposable
     }
 
     [Fact]
+    public void Old_memo_md_is_migrated_and_nothing_is_announced()
+    {
+        var data = _t.Combine("data");
+        Directory.CreateDirectory(data);
+        File.WriteAllText(Path.Combine(data, "memo.md"), "古いメモ");
+
+        var r = Run();
+
+        Assert.IsType<MemoMigrationResult.Migrated>(r.Migration);
+        Assert.Null(r.MemoNotice);
+        Assert.False(File.Exists(Path.Combine(data, "memo.md")));
+        Assert.True(File.Exists(Path.Combine(data, "memos", "メモ.md")));
+        Assert.Null(r.Notice);
+    }
+
+    [Fact]
+    public void Failed_migration_announces_on_the_memo_tab_only()
+    {
+        var data = _t.Combine("data");
+        Directory.CreateDirectory(data);
+        File.WriteAllText(Path.Combine(data, "memo.md"), "古いメモ");
+        File.WriteAllText(Path.Combine(data, "memos"), "邪魔");
+
+        var r = Run();
+
+        Assert.IsType<MemoMigrationResult.Failed>(r.Migration);
+        Assert.Contains("memo.md", r.MemoNotice);
+        Assert.Null(r.Notice);
+        Assert.True(File.Exists(Path.Combine(data, "memo.md")));
+    }
+
+    [Fact]
+    public void No_memo_md_means_no_migration_and_no_memo_notice()
+    {
+        var r = Run();
+        Assert.IsType<MemoMigrationResult.NothingToDo>(r.Migration);
+        Assert.Null(r.MemoNotice);
+    }
+
+    [Fact]
     public void No_source_creates_nothing()
     {
         var r = Run();

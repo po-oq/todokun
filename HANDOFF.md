@@ -1,61 +1,55 @@
-# todokun 引き継ぎメモ（2026-10-14 時点・メモタブ追加後）
+# 引き継ぎ：メモの複数化（計画レビュー → 実装の手前）
 
-次のセッション（新しいエージェント）が作業を続けるための要約。仕様・計画・差分は下のファイルが正で、ここには重複して書かない。
+作成：2026-10-15。前のセッションの要約。中身の詳細は下の文書にあるので、ここでは繰り返さない。
 
 ## いまの状態
-- **ローカルの `main`（`1ec19d8`）に全部マージ済み（すべて fast-forward）。push・PR は未実施**（origin への反映は利用者が頼んだときだけ）。作業ブランチ `feature/implement-p0-p7`・`feature/memo-tab`・`feature/checkbox-toggle` は残してある
-- 履歴：`d8b25f8`（P0 の結果と `poc/`）→ `4443842`（P1〜P7 の実装）→ `784eb57`（画面のモダン化）→ `294f487`（メモタブ）→ `1ec19d8`（ビューのチェックボックスのクリック切替）
-- **メモタブ（2026-10-14）**：上部の「TODO」「メモ」タブ。メモはアプリ全体で 1 つ（`data/memo.md`）で、操作は TODO の右ペインと同じ（保存後も編集に留まる）。設計書 `docs/superpowers/specs/2026-10-14-memo-tab-design.md`・手順 `docs/superpowers/plans/2026-10-14-memo-tab.md`・要件 8.5 章・計画の付録 A
-- **ビューのチェックボックスのクリック切替（2026-10-14）**：TODO・メモ共通。要件 8.6 章・計画の付録 B。描画で `data-line` を付け、クリックは `toggle:<行>:<0|1>` で知らせ、アプリが読み直して印の 1 文字だけ書く。成功時はページを作り直さない（楽観的更新）。実ブラウザ（Blink）で script の動作は確認済み。**WebView（mac WKWebView・Windows WebView2）での実クリックは未確認**
-- P0〜P7・メモタブ・チェック切替は **mac で実装・確認済み**。**Windows 11 実機の確認はすべて未実施**（要件 15 章の完了条件。メモタブ・チェック切替の確認項目は要件 13.3 の末尾に追記済み：`NativeWebView` が 2 つ同時に生きること、メモタブの IME、クリックの書き込み、など）
-- テスト：`Todokun.Tests` 373 件・`Todokun.UiTests` 41 件、ビルドは警告 0・エラー 0
 
-## 正とする文書（読む順）
-1. `docs/todo-requirements.md` — 仕様の正。**13.3 に「Windows 実機で残る確認」12 項目の一覧**がある
-2. `docs/todokun-plan.md`（図解 `docs/todokun-plan.html`。**片方を直したら他方も同じ内容に直す**）— 11.6 のキー経路、14 章「実装するセッションへの注意」
-3. `poc/README.md` — P0 の捨てる画面と、Windows 実機・実 IME の確認手順
-4. `README.md` — 使い方・データの場所・キー操作・開発手順
-5. 見た目の資料：`docs/todokun-design.html`
+- ブランチ `feature/memo-list-core`（`main` の `3b83511` から分岐）。**P1（Core）の 3 つ（1-1〜1-3）を実装した。コミットしていない**（頼まれたときだけ）。`main` は push していない。
+- 追加：`MemoTitle`・`MemoLibrary`・`MemoIndex`・`MemoMigration`（いずれも `src/Todokun.Core/`）とそのテスト。`AppStartup`／`StartupResult` に `Migration`・`MemoNotice` を足した（起動時に `memo.md` を `memos/メモ.md` へ引き継ぐ）。画面・`MemoStore`・`MemoEditorSession` は未変更。
+- テスト：`dotnet test Todokun.slnx` が 523＋41 件で全部通る。`dotnet build` は警告 0。
+- 未確認：mac の実アプリでの `--data-dir` 確認（引き継ぎ込みの起動）。Windows 実機はすべて未実施。
+- 計画の状態：P1 済み。次は P2 の 2-1（挙動を変えない共通化）。
 
-## 次にやること（優先順）
-1. **Windows 実機の確認**（利用者が実機で行い、結果を貼ってもらう想定）。手順は `poc/README.md` と要件 13.3。とくに：
-   - ←→ の二重到達（ページ経路／Avalonia 経路。`preventDefault` あり・なし）と長押し
-   - WebView で `Ctrl+E` → 編集に入って戻らないこと
-   - **IME**：変換確定の Enter・変換中の Tab・変換中の Esc（`Key.ImeProcessed` で届くか。mac では合成入力では確認できなかった）
-   - Undo・Enter の改行コード（`\r\n` か）・WebView2 Runtime・`PublishSingleFile` の `ProcessPath`・起動 3 秒以内・同期フォルダ配下の保存
-2. 結果に応じた修正と、要件 13 章・計画の `[ ]`→`[x]` 更新（md と html を対で）
-3. `scripts/publish.ps1` は書いただけで **Windows で未実行**
-4. 利用者から画面の見た目の追加要望があれば `src/Todokun/Themes/AppStyles.axaml` で調整（FluentTheme のまま、Miharikun と同じ方針）
+## 読むもの（正はこちら）
 
-## 決定済み（覆さない）
-- チェックのクリック切替：書き換えは印の 1 文字だけ・書く前にファイルを読み直して検証・成功時は作り直さない（`ContentUpdatedInPlace`）・失敗は理由を出してページを作り直す・Undo は無い。純粋関数は `Todokun.Core.TaskToggle`
-- メモタブ：メモは 1 つだけ・保存後も編集に留まる・起動時は常に TODO タブ・外部変更は監視しない。`←→`・`Ctrl+E` は見えているタブだけに送る（`MainViewModel.SelectedTab`）。編集の状態機械は `DocumentEditorSession`（日は `DayEditorSession`、メモは `MemoEditorSession`）
-- ←→ の二重到達は **A で一本化**：Tunnel は `e.Source`／フォーカスが `NativeWebView` なら捨てる。C（重複除去）は閾値が取れず不採用（要件 13.2・計画 11.6）
-- Mod+E は Avalonia 経路でも受け、ビューモードでは常に「編集に入る」（冪等）。編集直後 50ms 以内の再入力は戻さない（`MainViewModel.DoubleDeliveryWindowMs`）
-- Undo は範囲置換（`SelectedText`）。`TextBox.Text` の全文置換は Undo が効かない
-- Markdig の拡張名は `UseSoftlineBreakAsHardlineBreak()`（要件・計画は直し済み）
-- カレンダーは自前の 7×6。日の選択は「要求 → 確認 → 確定」
-- 一覧は `ListBox` ではなくボタンの並び（選択の巻き戻しを避けるため）
+| 文書 | 役割 |
+|---|---|
+| `docs/memo-list-requirements.md` | 要件（正） |
+| `docs/memo-list-plan.md`／`.html` | 実装計画（正。**md と html は対で直す**。10 章「実装するセッションへの注意」を必ず読む） |
+| `docs/memo-list-review.html` | 計画レビューの根拠（file:line つき）。計画の「（レビュー #n）」の出どころ |
+| `docs/memo-list-design.html` | 触れる画面イメージ（名前変更のフォーカスが外れたときの扱いだけ計画と違う。4-1 で直す） |
+| `docs/todo-requirements.md` 8.3〜8.6・11 章 | 既存の仕様（8.5 は「メモは 1 つ」のまま。4-1 で直す） |
+| `HANDOFF.md`・`README.md` | プロジェクトの決まり（コミットは頼まれたときだけ、`--data-dir` を一時フォルダに、など） |
 
-## 守ること・注意
-- コミット・push・PR は**頼まれたときだけ**。本物のデータに触れない（`--data-dir` を一時フォルダに）
-- 仕様と計画が食い違ったら**要件が正**。判断がつかなければ利用者に聞く
-- 返答は日本語。利用者は「やること・結果・未確認」を短く分けた報告を好む（フェーズごとに止まって報告してきた）
-- Miharikun（コピー元）は `https://github.com/po-oq/Miharikun`（確かめた版 `9a305a6`）。前セッションの clone はセッション専用の一時フォルダにあるので、必要なら clone し直す
-- ヘッドレステストで ViewModel の `Draft` だけを直接変えると、入力欄の遅れた `TextChanged` が巻き戻す。テストでは入力欄の文字を変える（実際の入力は必ず入力欄を通る）
-- mac のキー注入は OS 全体では不可（アクセシビリティ権限）。`poc/MacEvents.cs` のようにアプリ内から `NSEvent` を流す方式を使った
-- 見た目の確認：`TODOKUN_SHOT_DIR=<フォルダ> dotnet test tests/Todokun.UiTests` でライト/ダーク・ビュー/編集の画像が出る
+## 決まったこと（要点だけ。詳細は計画 9 章）
 
-## 未確定・小さな残り
-- ダークの WebView の地（`#1E1E1E`）とウィンドウの地（`#1E1F22`）が 1 段違う（気になれば揃える）
-- 起動時の「すでに起動しています」の案内画面は目視していない（ロジックはテスト済み）
-- 標準 `Calendar` は試していない（自前で決定済み）
+- Q1：起動時は**最後に開いていたメモ**（`cache/last-memo.txt`。2-5 で実装）。
+- Q2：WebView にフォーカスがあっても Ctrl/Cmd+N・F を効かせる（mac は Tunnel、Windows はページから転送、重複は短い間で除去）。
+- Q3：データルートが書けないときの古い `memo.md` は表示しない（知らせるだけ）。
 
-## 推奨スキル（次のエージェントが Skill ツールで呼ぶもの）
-- `superpowers:systematic-debugging` — Windows 実機で不具合の報告が来たとき（原因を確かめてから直す）
-- `superpowers:verification-before-completion` — 「完了」「確認済み」と書く前に、実際にビルド・テストを走らせる
-- `superpowers:receiving-code-review` — レビューの指摘を受けたとき（事実を確かめてから採否を決める）
-- `superpowers:finishing-a-development-branch` — Windows の確認が済み、origin への push・PR など最終的な取り込みを決める段階（ローカルの main へのマージは済み）
-- `code-review`（または `engineering:code-review`）— P3 後・P5 後に利用者が望んだレビュー
-- `anthropic-skills:peraichi` — 見た目や設計の変更を、図入りのペライチ HTML で相談したいとき
-- `anthropic-skills:impl-plan` — 大きな追加（例：チェックボックスのクリック切替、自動保存。要件 16 章の保留事項）に入るときの計画づくり
+## 次にやること
+
+1. P1 をコミットするか利用者に確認する（頼まれたときだけコミット）。
+2. mac で `dotnet run --project src/Todokun -- --data-dir <一時フォルダ>` を起動し、`memo.md` を置いておくと `memos/メモ.md` に引き継がれることを確かめる。
+3. P2 の 2-1：`DocumentEditorSession` に `DeleteWhenBlank`・`HasDocument` を足す（挙動不変。既存の空保存のテストを 1 行も変えずに通す）。以降は計画 3 章。
+4. フェーズの終わりごとに `dotnet test`・`dotnet build`（警告 0）・進捗と HANDOFF の更新 → 止まって報告。
+
+## 実装で決めたこと（計画からの補足）
+
+- `MemoTitle.Truncate(s, max)` を公開（`(n)` を足すときの切り詰めと抜粋で使う）。
+- 予約名に `_` を足して 100 文字を超える場合（`CON.` ＋長い拡張子）は、もう一度切る。計画の「予約名は短いので 100 文字を超えない」は誤りだった。
+- 一時ファイル名は `memos/.md.<guid>.tmp`（`.` 始まりなので一覧に出ない）。
+
+## 注意
+
+- 返答は日本語。コミット・push・PR は頼まれたときだけ。`main` に直接コミットしない（ブランチを切る）。
+- Windows 実機の確認はすべて未実施（項目は計画 10.2）。
+
+## 使うとよいスキル（Skill ツールで呼ぶ）
+
+- `superpowers:executing-plans`：計画（`docs/memo-list-plan.md`）を自分で順に実装するとき。
+- `superpowers:test-driven-development`：P1 は「テスト先行」。各コミットの前に。
+- `superpowers:verification-before-completion`：フェーズの完了を報告する前（テスト件数・警告 0 の確認）。
+- `superpowers:requesting-code-review`：P2 の後（画面を載せる前）にレビューを挟むとき。
+- `anthropic-skills:peraichi`：レビュー結果や設計の変更を図つき HTML にまとめるとき（`docs/memo-list-review.html` と同じ形式）。
+- `anthropic-skills:impl-plan`：計画そのものを大きく組み直す必要が出たとき（md と html の対を保つ）。

@@ -11,7 +11,9 @@ public sealed record StartupResult(
     DayIndex Index,
     DayStore Store,
     StartupCopyResult? Copy,
-    string? Notice)
+    string? Notice,
+    MemoMigrationResult Migration,
+    string? MemoNotice)
 {
     /// <summary>同じデータルートで、すでに起動している（画面には案内だけを出して終わる）。</summary>
     public bool AlreadyRunning => Instance.Status == SingleInstanceStatus.AlreadyRunning;
@@ -32,7 +34,7 @@ public static class AppStartup
 
         var instance = SingleInstance.TryAcquire(paths.DataRoot);
         if (instance.Status == SingleInstanceStatus.AlreadyRunning)
-            return new StartupResult(paths, instance, true, null, true, null, new DayIndex(""), new DayStore(paths.DataRoot), null, null);
+            return new StartupResult(paths, instance, true, null, true, null, new DayIndex(""), new DayStore(paths.DataRoot), null, null, new MemoMigrationResult.NothingToDo(), null);
         if (instance.Status == SingleInstanceStatus.Unavailable)
             AppLog.Write($"二重起動の確認を使えない（確認を諦めて起動を続ける）: {instance.Error}");
 
@@ -64,6 +66,30 @@ public static class AppStartup
                     break;
             }
         }
-        return new StartupResult(paths, instance, cacheOk, cacheReason, dataOk, dataReason, index, store, copy, notice);
+
+        // メモ（memo.md → memos/）。お知らせは TODO 側の Notice とは別（メモタブに出す）。
+        var migration = MemoMigration.Run(new MemoLibrary(paths.DataRoot), dataOk);
+        var memoNotice = MemoNoticeOf(migration);
+        return new StartupResult(paths, instance, cacheOk, cacheReason, dataOk, dataReason, index, store, copy, notice, migration, memoNotice);
+    }
+
+    private static string? MemoNoticeOf(MemoMigrationResult migration)
+    {
+        switch (migration)
+        {
+            case MemoMigrationResult.Failed f:
+                AppLog.Write($"メモの引き継ぎに失敗: {f.Reason}");
+                return $"これまでのメモ（memo.md）を引き継げませんでした：{f.Reason}。次に起動したときにもう一度試します";
+            case MemoMigrationResult.NotWritable:
+                return "書き込めないため、これまでのメモ（memo.md）は書き込めるようになるまで表示されません";
+            case MemoMigrationResult.Migrated { OldRemoved: false }:
+            case MemoMigrationResult.AlreadyMigrated { OldRemoved: false }:
+                return "古い memo.md が残っています（消して構いません）";
+            case MemoMigrationResult.Migrated m:
+                AppLog.Write($"メモを引き継いだ: memo.md → memos/{m.Title}.md");
+                return null;
+            default:
+                return null;
+        }
     }
 }
