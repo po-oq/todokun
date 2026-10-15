@@ -92,6 +92,15 @@ public abstract partial class DocumentEditorSession : ObservableObject
     protected abstract string AskSaveText { get; }
     protected abstract string ConfirmDeleteText { get; }
 
+    /// <summary>空（空白だけ）で保存したら、ファイルを削除する（確認あり）。false なら空のまま書いて残す（メモ）。</summary>
+    protected virtual bool DeleteWhenBlank => true;
+
+    /// <summary>開いている文書があるか。false なら編集・保存・チェックの切り替えは何もしない（「メモなし」）。</summary>
+    protected virtual bool HasDocument => true;
+
+    /// <summary><see cref="HasDocument"/> が変わったときに派生が呼ぶ（「編集」ボタンの押せる／押せないを直す）。</summary>
+    protected void RefreshCanBeginEdit() => OnPropertyChanged(nameof(CanBeginEdit));
+
     // ── コマンド（画面の部品用） ──
     public IRelayCommand BeginEditCommand { get; }
     public IAsyncRelayCommand SaveCommand { get; }
@@ -114,7 +123,7 @@ public abstract partial class DocumentEditorSession : ObservableObject
     public string ModeText => IsEditing ? "編集中" : "ビュー";
 
     /// <summary>「✎ 編集」を押せるか。読めない・データルートが書けないとき・確認中は押せない。</summary>
-    public bool CanBeginEdit => IsViewing && !IsConfirming && Content is not DayContent.Failed && _writable().CanWrite;
+    public bool CanBeginEdit => HasDocument && IsViewing && !IsConfirming && Content is not DayContent.Failed && _writable().CanWrite;
 
     public static string Norm(string s) => s.Replace("\r\n", "\n");
 
@@ -152,6 +161,11 @@ public abstract partial class DocumentEditorSession : ObservableObject
     public bool BeginEdit()
     {
         if (IsConfirming) return false;
+        if (!HasDocument)
+        {
+            Message = "メモがありません。＋で追加してください";
+            return false;
+        }
         if (Mode == EditorMode.Edit) return true;
         if (Content is DayContent.Failed failed)
         {
@@ -184,10 +198,10 @@ public abstract partial class DocumentEditorSession : ObservableObject
 
     private async Task<SaveResult> SaveCoreAsync()
     {
-        if (Mode != EditorMode.Edit) return SaveResult.Cancelled;
+        if (!HasDocument || Mode != EditorMode.Edit) return SaveResult.Cancelled;
         if (!IsDirty) return SaveResult.NoChange;
 
-        if (!IsBlank(Draft))
+        if (!IsBlank(Draft) || !DeleteWhenBlank)
         {
             try
             {
@@ -259,7 +273,7 @@ public abstract partial class DocumentEditorSession : ObservableObject
     /// </summary>
     public bool ToggleCheck(int line, bool newChecked)
     {
-        if (IsConfirming || Mode != EditorMode.View) return false;
+        if (!HasDocument || IsConfirming || Mode != EditorMode.View) return false;
 
         var (canWrite, reason) = _writable();
         if (!canWrite)

@@ -8,7 +8,7 @@
 - 追加：`MemoTitle`・`MemoLibrary`・`MemoIndex`・`MemoMigration`（いずれも `src/Todokun.Core/`）とそのテスト。`AppStartup`／`StartupResult` に `Migration`・`MemoNotice` を足した（起動時に `memo.md` を `memos/メモ.md` へ引き継ぐ）。画面・`MemoStore`・`MemoEditorSession` は未変更。
 - テスト：`dotnet test Todokun.slnx` が 523＋41 件で全部通る。`dotnet build` は警告 0。
 - 未確認：mac の実アプリでの `--data-dir` 確認（引き継ぎ込みの起動）。Windows 実機はすべて未実施。
-- 計画の状態：P1 済み。次は P2 の 2-1（挙動を変えない共通化）。
+- P1 は 3 コミット済み（`73466a9`・`4b7e283`・`c6d414e`）。**P2 の 2-1 を実装した（未コミット）**：`DocumentEditorSession` に `DeleteWhenBlank`・`HasDocument`・`RefreshCanBeginEdit()` を足した。既存のテストは 1 行も変えずに通る。テストは 530＋41 件。次は 2-2（`MemoEditorSession`）。
 
 ## 読むもの（正はこちら）
 
@@ -29,9 +29,9 @@
 
 ## 次にやること
 
-1. P1 をコミットするか利用者に確認する（頼まれたときだけコミット）。
+1. 2-1 をコミットするか利用者に確認する（頼まれたときだけコミット）。
 2. mac で `dotnet run --project src/Todokun -- --data-dir <一時フォルダ>` を起動し、`memo.md` を置いておくと `memos/メモ.md` に引き継がれることを確かめる。
-3. P2 の 2-1：`DocumentEditorSession` に `DeleteWhenBlank`・`HasDocument` を足す（挙動不変。既存の空保存のテストを 1 行も変えずに通す）。以降は計画 3 章。
+3. P2 の 2-2 以降（計画 3 章）。
 4. フェーズの終わりごとに `dotnet test`・`dotnet build`（警告 0）・進捗と HANDOFF の更新 → 止まって報告。
 
 ## 実装で決めたこと（計画からの補足）
