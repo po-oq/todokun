@@ -3,7 +3,8 @@ namespace Todokun.Docs;
 /// <summary>
 /// ページの <c>keydown</c> を C# に知らせるスクリプト（本文。<c>&lt;script&gt;</c> なし。要件 11 章、計画 11.6）。
 /// ←→（修飾キーなし）→ <c>key:ArrowLeft</c>／<c>key:ArrowRight</c>、Mod+E → <c>key:BeginEdit</c>。
-/// Mod+E は押し続け（<c>e.repeat</c>）のとき送らない。<c>defaultPrevented</c> のときは何も送らない。
+/// Mod+N → <c>key:NewMemo</c>、Mod+F → <c>key:FindMemo</c>（メモタブ用。TODO タブのホストは捨てる）。
+/// Mod+E・N・F は押し続け（<c>e.repeat</c>）のとき送らない。<c>defaultPrevented</c> のときは何も送らない。
 /// </summary>
 public static class KeyForwarderScript
 {
@@ -22,6 +23,19 @@ public static class KeyForwarderScript
               e.preventDefault();
               if (e.repeat) return;
               invokeCSharpAction('key:BeginEdit');
+              return;
+            }
+            // メモタブ：Ctrl/Cmd+N（追加）・Ctrl/Cmd+F（絞り込み欄へ）。WebView の既定（新しいウィンドウ・検索バー）は出さない
+            if (mod && !e.altKey && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
+              e.preventDefault();
+              if (e.repeat) return;
+              invokeCSharpAction('key:NewMemo');
+              return;
+            }
+            if (mod && !e.altKey && !e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+              e.preventDefault();
+              if (e.repeat) return;
+              invokeCSharpAction('key:FindMemo');
             }
           });
         })();

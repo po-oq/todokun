@@ -220,7 +220,7 @@ public partial class TodoPreview : UserControl
         }
     }
 
-    // ページからの知らせ（invokeCSharpAction）。受けるのは key:ArrowLeft・key:ArrowRight・key:BeginEdit と、
+    // ページからの知らせ（invokeCSharpAction）。受けるのは key:ArrowLeft・key:ArrowRight・key:BeginEdit・key:NewMemo・key:FindMemo と、
     // チェックボックスの toggle:<行>:<0|1> だけ。他は捨てる。
     private void OnWebMessageReceived(object? sender, WebMessageReceivedEventArgs e)
     {
@@ -229,6 +229,8 @@ public partial class TodoPreview : UserControl
             PreviewKey.ArrowLeft => (PageKey?)PageKey.ArrowLeft,
             PreviewKey.ArrowRight => PageKey.ArrowRight,
             PreviewKey.BeginEdit => PageKey.BeginEdit,
+            PreviewKey.NewMemo => PageKey.NewMemo,
+            PreviewKey.FindMemo => PageKey.FindMemo,
             _ => null,
         };
         if (key is { } k)

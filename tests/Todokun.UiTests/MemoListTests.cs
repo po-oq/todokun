@@ -157,10 +157,20 @@ public sealed class MemoListTests : IDisposable
             Key.Escape => PhysicalKey.Escape,
             Key.F2 => PhysicalKey.F2,
             Key.Delete => PhysicalKey.Delete,
+            Key.N => PhysicalKey.N,
+            Key.F => PhysicalKey.F,
+            Key.Down => PhysicalKey.ArrowDown,
+            Key.Up => PhysicalKey.ArrowUp,
             _ => PhysicalKey.None,
         };
         w.KeyPress(key, RawInputModifiers.None, physical, null);
     }
+
+    private static RawInputModifiers CommandRaw =>
+        Avalonia.Application.Current!.PlatformSettings!.HotkeyConfiguration.CommandModifiers == KeyModifiers.Meta
+            ? RawInputModifiers.Meta : RawInputModifiers.Control;
+
+    private static void PressCommand(Window w, Key key, PhysicalKey physical) => w.KeyPress(key, CommandRaw, physical, null);
 
     private static TextBox RenameBox(Window w) => Find<TextBox>(w, "RenameBox");
 
@@ -388,5 +398,94 @@ public sealed class MemoListTests : IDisposable
         Assert.Null(vm.Memo.Editor.Title);
         Assert.True(Find<TextBlock>(w, "MemoEmpty").IsVisible);
         Assert.Equal("メモなし", vm.Memo.Editor.HeaderText);
+    }
+
+    // ── 3-4：キー操作 ──
+
+    [AvaloniaFact]
+    public void Command_n_adds_a_memo_even_while_typing_in_the_edit_box()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+        vm.Memo.Editor.BeginEdit();
+        Flush();
+        var edit = Find<DocumentPaneView>(w, "MemoPane").GetVisualDescendants().OfType<TextBox>().First(x => x.Name == "EditBox");
+        edit.Focus();
+        Flush();
+
+        PressCommand(w, Key.N, PhysicalKey.N);
+        Flush();
+
+        Assert.Equal(["a", "無題のメモ"], new MemoLibrary(_t.Path).EnumerateTitles().Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal("無題のメモ", vm.Memo.List.RenamingTitle);
+    }
+
+    [AvaloniaFact]
+    public void Command_n_does_nothing_on_the_todo_tab()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+        vm.SelectTab(AppTab.Todo);
+        Flush();
+
+        PressCommand(w, Key.N, PhysicalKey.N);
+        Flush();
+
+        Assert.Equal(["a"], new MemoLibrary(_t.Path).EnumerateTitles().ToArray());
+    }
+
+    [AvaloniaFact]
+    public void Command_f_focuses_the_search_box_and_selects_it()
+    {
+        var (w, _) = Open(("a", "x", 1));
+        var search = Find<TextBox>(w, "MemoSearch");
+        search.Text = "abc";
+        Find<Button>(w, "MemoAdd").Focus();
+        Flush();
+
+        PressCommand(w, Key.F, PhysicalKey.F);
+        Flush();
+
+        Assert.True(search.IsFocused);
+        Assert.Equal(0, search.SelectionStart);
+        Assert.Equal(3, search.SelectionEnd);
+    }
+
+    [AvaloniaFact]
+    public void Down_arrow_moves_focus_between_items()
+    {
+        var (w, _) = Open(("a", "x", 1), ("b", "y", 10), ("c", "z", 20));
+        ItemButton(w, "a").Focus();
+        Flush();
+
+        Press(w, Key.Down);
+        Flush();
+
+        var focused = TopLevel.GetTopLevel(w)!.FocusManager!.GetFocusedElement();
+        Assert.Equal("b", (focused as Control)?.DataContext is MemoListItem item ? item.Title : null);
+    }
+
+    [AvaloniaFact]
+    public void Keyboard_only_flow_add_rename_switch_delete()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+
+        PressCommand(w, Key.N, PhysicalKey.N);          // 追加（入力状態）
+        Flush();
+        RenameBox(w).Text = "k";
+        Flush();
+        Press(w, Key.Enter);                             // 確定 → 編集モード
+        Flush();
+        Assert.Equal("k", vm.Memo.Editor.Title);
+        Assert.True(vm.Memo.Editor.IsEditing);
+
+        w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);   // ビューに戻る
+        Flush();
+        Assert.True(vm.Memo.Editor.IsViewing);
+
+        ItemButton(w, "a").Focus();
+        Flush();
+        Press(w, Key.Delete);                            // 項目 a を削除（確認）
+        Flush();
+        Assert.False(new MemoLibrary(_t.Path).Exists("a"));
+        Assert.Equal("k", vm.Memo.Editor.Title);
     }
 }

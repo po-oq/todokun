@@ -26,7 +26,8 @@
 
         <Grid Grid.Row="3">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl x:Name="MemoItems" ItemsSource="{Binding Items}" Margin="6,0,6,6">
+                <ItemsControl x:Name="MemoItems" ItemsSource="{Binding Items}" Margin="6,0,6,6"
+                              XYFocus.NavigationModes="Enabled">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:MemoListItem">
                             <Grid Classes="memoitem">
@@ -44,7 +45,7 @@
                                     </StackPanel>
                                 </Button>
                                 <!-- 削除（ホバー・フォーカスで現れる）。確認ダイアログが出る -->
-                                <Button x:Name="MemoDeleteButton" Classes="memodelete" Content="✕"
+                                <Button x:Name="MemoDeleteButton" Classes="memodelete" Content="✕" Focusable="False"
                                         IsVisible="{Binding IsNotRenaming}" Command="{Binding DeleteCommand}"
                                         HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0"
                                         ToolTip.Tip="削除（Delete）"

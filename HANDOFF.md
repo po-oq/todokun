@@ -8,7 +8,7 @@
 - 追加：`MemoTitle`・`MemoLibrary`・`MemoIndex`・`MemoMigration`（いずれも `src/Todokun.Core/`）とそのテスト。`AppStartup`／`StartupResult` に `Migration`・`MemoNotice` を足した（起動時に `memo.md` を `memos/メモ.md` へ引き継ぐ）。画面・`MemoStore`・`MemoEditorSession` は未変更。
 - テスト：`dotnet test Todokun.slnx` が 523＋41 件で全部通る。`dotnet build` は警告 0。
 - 未確認：画面でのメモの一覧（P3 で載せる）。Windows 実機はすべて未実施。
-- P1（3 コミット）・P2（5 コミット）・P3 の 3-1（`63bdc61`）・3-2（`e9753f0`）はコミット済み。**3-3 を実装した（未コミット）**：項目の「✕」（ホバー・フォーカスで現れる。`MemoDeleteButton`）・Delete（mac は `Cmd+⌫` も。`MainWindow` の Tunnel。TextBox では食わない。対象はフォーカスのある項目、無ければ開いているメモ）。確認ダイアログ→削除→隣を開く（0 件なら「メモなし」）は 2-3 の `MemoListViewModel.DeleteAsync`。UI テスト 7 件を足して 609＋62 件、警告 0。**未実装：ウィンドウの Ctrl/Cmd+N・F と `PageKey`（`key:NewMemo`／`key:FindMemo`）の転送、一覧の ↑↓、UI テストの仕上げ（3-4）**。読み取り専用での削除失敗の見た目、削除ダイアログの実機の見た目は未確認。
+- P1（3 コミット）・P2（5 コミット）・P3 の 3-1（`63bdc61`）・3-2（`e9753f0`）・3-3（`157c6b2`）はコミット済み。**3-4 を実装した（未コミット）**：`MainWindow` の Tunnel に Ctrl/Cmd+N・Ctrl/Cmd+F（メモタブだけ。WebView・編集欄・検索欄にフォーカスがあっても効く。重複は 2-4 の短い間の除去）・`KeyForwarderScript` に `key:NewMemo`／`key:FindMemo`（Windows の WebView2 用。`preventDefault`・押し続けは送らない）・`PreviewKey`／`PageKey` に NewMemo・FindMemo・一覧の ↑↓（`XYFocus.NavigationModes`）・✕は Tab の対象にしない。UI テストを足して 614＋67 件、警告 0。実アプリ（mac・`--data-dir`）の起動も確認。**これで P3 は実装完了**。残りは P4（4-1：README・要件・`todo-requirements.md` 8.5 章・13.3・`todokun-plan.md` 付録 C・`memo-list-requirements.md`・`memo-list-design.html`）と、mac での受け入れ条件（Gherkin 5 本）の目視確認。副作用：ページ側のスクリプトは TODO タブのプレビューにも入るので、Ctrl/Cmd+F・N の WebView 既定動作（検索バー）は TODO タブでも出なくなる。
 
 ## 読むもの（正はこちら）
 
@@ -29,9 +29,9 @@
 
 ## 次にやること
 
-1. 3-3 をコミットするか利用者に確認する（頼まれたときだけコミット）。
+1. 3-4 をコミットするか利用者に確認する（頼まれたときだけコミット）。
 2. （済）mac での引き継ぎの起動確認。
-3. P3 の 3-4（キー操作と UI テスト）から（計画 4 章）。
+3. 要件の受け入れ条件（Gherkin 5 本）を mac で一通り確かめる（ライト・ダーク。品質ゲート 3：TODO タブ・←→・Ctrl+E が変わっていない）。その後 P4 の 4-1（計画 5 章）。
 4. フェーズの終わりごとに `dotnet test`・`dotnet build`（警告 0）・進捗と HANDOFF の更新 → 止まって報告。
 
 ## 実装で決めたこと（計画からの補足）

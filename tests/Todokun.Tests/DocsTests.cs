@@ -169,6 +169,27 @@ public class TodoRendererTests
     }
 
     [Fact]
+    public void Key_forwarder_sends_new_memo_and_find_memo_with_the_platform_modifier_and_not_for_repeat()
+    {
+        var mac = KeyForwarderScript.For(true);
+        var win = KeyForwarderScript.For(false);
+        foreach (var s in new[] { mac, win })
+        {
+            foreach (var message in new[] { "key:NewMemo", "key:FindMemo" })
+            {
+                var send = s.IndexOf(message, StringComparison.Ordinal);
+                Assert.True(send > 0, message);
+                // 送る前に preventDefault し、押し続けは送らない
+                var before = s[..send];
+                Assert.True(before.LastIndexOf("e.preventDefault()", StringComparison.Ordinal) > before.LastIndexOf("e.key ===", StringComparison.Ordinal));
+                Assert.True(before.LastIndexOf("e.repeat", StringComparison.Ordinal) > before.LastIndexOf("e.key ===", StringComparison.Ordinal));
+            }
+        }
+        Assert.Contains("var IS_MAC = true;", mac);
+        Assert.Contains("var IS_MAC = false;", win);
+    }
+
+    [Fact]
     public void Key_forwarder_does_not_send_for_repeat_before_sending_begin_edit()
     {
         var s = KeyForwarderScript.For(false);
@@ -182,10 +203,14 @@ public class PreviewKeyMessageTests
     [InlineData("key:ArrowLeft", PreviewKey.ArrowLeft)]
     [InlineData("key:ArrowRight", PreviewKey.ArrowRight)]
     [InlineData("key:BeginEdit", PreviewKey.BeginEdit)]
+    [InlineData("key:NewMemo", PreviewKey.NewMemo)]
+    [InlineData("key:FindMemo", PreviewKey.FindMemo)]
+    [InlineData("\"key:NewMemo\"", PreviewKey.NewMemo)]
+    [InlineData("\"key:FindMemo\"", PreviewKey.FindMemo)]
     [InlineData("\"key:ArrowLeft\"", PreviewKey.ArrowLeft)]
     [InlineData("\"key:ArrowRight\"", PreviewKey.ArrowRight)]
     [InlineData("\"key:BeginEdit\"", PreviewKey.BeginEdit)]
-    public void Accepts_the_three_messages(string body, PreviewKey expected) =>
+    public void Accepts_the_five_messages(string body, PreviewKey expected) =>
         Assert.Equal(expected, PreviewKeyMessage.Parse(body));
 
     [Theory]

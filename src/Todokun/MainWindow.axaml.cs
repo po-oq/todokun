@@ -75,6 +75,8 @@ public partial class MainWindow : Window
         if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Left) key = AppKey.Left;
         else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Right) key = AppKey.Right;
         else if (e.KeyModifiers == CommandModifiers && e.Key == Key.E) key = AppKey.ModE;
+        else if (e.KeyModifiers == CommandModifiers && e.Key == Key.N) key = AppKey.NewMemo;
+        else if (e.KeyModifiers == CommandModifiers && e.Key == Key.F) key = AppKey.FindMemo;
         else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.F2) key = AppKey.RenameMemo;
         else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Delete) key = AppKey.DeleteMemo;
         else if (OperatingSystem.IsMacOS() && e.KeyModifiers == KeyModifiers.Meta && e.Key == Key.Back) key = AppKey.DeleteMemo;
