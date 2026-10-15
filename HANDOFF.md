@@ -7,8 +7,8 @@
 - ブランチ `feature/memo-list-core`（`main` の `3b83511` から分岐）。**P1（Core）の 3 つ（1-1〜1-3）を実装した。コミットしていない**（頼まれたときだけ）。`main` は push していない。
 - 追加：`MemoTitle`・`MemoLibrary`・`MemoIndex`・`MemoMigration`（いずれも `src/Todokun.Core/`）とそのテスト。`AppStartup`／`StartupResult` に `Migration`・`MemoNotice` を足した（起動時に `memo.md` を `memos/メモ.md` へ引き継ぐ）。画面・`MemoStore`・`MemoEditorSession` は未変更。
 - テスト：`dotnet test Todokun.slnx` が 523＋41 件で全部通る。`dotnet build` は警告 0。
-- 未確認：mac の実アプリでの `--data-dir` 確認（引き継ぎ込みの起動）。Windows 実機はすべて未実施。
-- P1 は 3 コミット済み（`73466a9`・`4b7e283`・`c6d414e`）、2-1（`5018ea5`）・2-2（`74e9f4f`）・2-3（`0ac551d`）もコミット済み。**2-4 を実装した（未コミット）**：`MemoPaneViewModel.List`（`MemoListViewModel`）・`AppKey.NewMemo/FindMemo/RenameMemo/DeleteMemo`（`OnWindowKey(key, fromWebView, memoTarget)`）・`PageKey.NewMemo/FindMemo`（N・F は短い間の重複を捨てる）・`memoNotice` をメモタブの `Editor.Message` に出す・`App` が `MemoLibrary`／`MemoIndex` を組み立てる・`MemoStore`／`MemoStoreTests` を削除。**画面にはまだ載っていない**（キーのウィンドウ側の受けは 3-4）。テストは 590＋41 件、警告 0。次は 2-5（最後に開いたメモを覚える）。
+- 未確認：画面でのメモの一覧（P3 で載せる）。Windows 実機はすべて未実施。
+- P1 は 3 コミット済み（`73466a9`・`4b7e283`・`c6d414e`）、2-1（`5018ea5`）・2-2（`74e9f4f`）・2-3（`0ac551d`）・2-4（`c2305c1`）もコミット済み。**2-5 を実装した（未コミット）**：`MemoLastOpened`（Core。`<cache>/last-memo.txt`）と、`MainViewModel` の起動時の選択（最後に開いたメモ → 無ければ先頭 → 無ければ「メモなし」）・開く／改名／削除への追従。**これで P2 は完了**。テストは 605＋41 件、警告 0。mac で `--data-dir <一時フォルダ>` に `memo.md` を置いて実アプリを起動し、`memos/メモ.md` に引き継がれる（元の 23 バイトのまま）ことを確かめた。画面はまだ 1 つのメモの見た目のまま（P3 で左ペインを載せる）。
 
 ## 読むもの（正はこちら）
 
@@ -29,9 +29,9 @@
 
 ## 次にやること
 
-1. 2-4 をコミットするか利用者に確認する（頼まれたときだけコミット）。
-2. mac で `dotnet run --project src/Todokun -- --data-dir <一時フォルダ>` を起動し、`memo.md` を置いておくと `memos/メモ.md` に引き継がれることを確かめる。
-3. P2 の 2-5（計画 3 章）。終わったら P2 の完了報告（品質ゲート 1〜4。mac の `--data-dir` 確認もここで）。
+1. 2-5 をコミットするか利用者に確認する（頼まれたときだけコミット）。P2 の後（画面を載せる前）に、望めばレビューを挟む（計画 10.2）。
+2. （済）mac での引き継ぎの起動確認。
+3. P3（計画 4 章）の 3-1 から。
 4. フェーズの終わりごとに `dotnet test`・`dotnet build`（警告 0）・進捗と HANDOFF の更新 → 止まって報告。
 
 ## 実装で決めたこと（計画からの補足）

@@ -48,7 +48,8 @@ public partial class App : Application
                 startupNotice: start.Notice,
                 memoLibrary: memoLibrary,
                 memoIndex: new MemoIndex(memoLibrary),
-                memoNotice: start.MemoNotice);
+                memoNotice: start.MemoNotice,
+                lastOpened: new MemoLastOpened(Path.Combine(start.Paths.CacheRoot, "last-memo.txt")));
             Theme.Changed += _ => vm.OnThemeChanged();
             desktop.MainWindow = new MainWindow { DataContext = vm };
         }

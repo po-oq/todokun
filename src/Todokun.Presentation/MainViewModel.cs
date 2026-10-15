@@ -24,7 +24,7 @@ public sealed class MainViewModel : IDocumentPane
         string previewDir, Func<bool>? isDark = null, Func<DateOnly>? todayProvider = null,
         Func<(bool CanWrite, string? Reason)>? dataWritable = null, string? previewUnavailableReason = null,
         string? startupNotice = null, Func<long>? nowMs = null, MemoLibrary? memoLibrary = null, MemoIndex? memoIndex = null,
-        string? memoNotice = null)
+        string? memoNotice = null, MemoLastOpened? lastOpened = null)
     {
         _index = index;
         _ui = ui;
@@ -52,10 +52,25 @@ public sealed class MainViewModel : IDocumentPane
         Editor.ContentUpdatedInPlace += () => _current = Editor.Preview;   // チェックボックスのクリック（作り直さない）
         LeftPane.Cursor.OpenDayRequested += day => _ = OpenDayAsync(day);
         Editor.Open(today);
-        // 起動時は一覧の先頭（更新が新しいメモ）。無ければ「メモなし」。（最後に開いたメモは 2-5）
-        var first = memos.Items.FirstOrDefault();
-        if (first is not null) memoEditor.Open(first.Title);
+        // 起動時は最後に開いていたメモ。無い・読めない・一覧に無ければ一覧の先頭（更新が新しいメモ）。0 件なら「メモなし」
+        var start = lastOpened?.Read() is { } remembered ? memos.Find(remembered)?.Title : null;
+        start ??= memos.Items.FirstOrDefault()?.Title;
+        if (start is not null) memoEditor.Open(start);
         else memoEditor.Clear();
+        if (lastOpened is not null)
+        {
+            // 開いた・名前が変わった → 覚える。開いているメモが無くなった → 忘れる
+            void Remember()
+            {
+                if (memoEditor.Title is { } t) lastOpened.Write(t);
+                else lastOpened.Clear();
+            }
+            if (memoEditor.Title is { } opened) lastOpened.Write(opened);   // 起動時に何も無くても、覚えているものは消さない
+            memoEditor.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(MemoEditorSession.Title)) Remember();
+            };
+        }
         // 起動時のお知らせ（コピー失敗・データルートに書けない）。次に日を開く・編集に入るまで出す
         if (startupNotice is not null) Editor.Message = startupNotice;
         // メモの引き継ぎのお知らせはメモタブに出す（TODO 側のお知らせとは別）

@@ -396,4 +396,89 @@ public sealed class MemoTabViewModelTests : IDisposable
         Assert.False(await vm.CanCloseAsync());
         Assert.Equal(AppTab.Memo, vm.SelectedTab);
     }
+
+    // ── 最後に開いていたメモ（2-5） ──
+
+    private MainViewModel VmWithLast(MemoLastOpened last, params (string Title, int MinutesAgo)[] memos)
+    {
+        var lib = new MemoLibrary(_t.Path);
+        foreach (var (title, ago) in memos)
+        {
+            lib.Write(title, "# " + title);
+            File.SetLastWriteTimeUtc(lib.PathOf(title), DateTime.UtcNow.AddMinutes(-ago));
+        }
+        return new MainViewModel(new DayIndex(_t.Path), new DayStore(_t.Path), Today, _t.Path, false, _ui, _t.Combine("p"),
+            nowMs: () => _now, lastOpened: last);
+    }
+
+    private MemoLastOpened Last() => new(_t.Combine("cache", "last-memo.txt"));
+
+    [Fact]
+    public void Starts_with_the_last_opened_memo_even_when_it_is_not_the_newest()
+    {
+        var last = Last();
+        last.Write("古い");
+
+        var vm = VmWithLast(last, ("古い", 60), ("新しい", 1));
+
+        Assert.Equal("古い", vm.Memo.Editor.Title);
+        Assert.True(vm.Memo.List.Items.Single(i => i.Title == "古い").IsSelected);
+    }
+
+    [Fact]
+    public void Falls_back_to_the_first_when_the_last_memo_is_gone()
+    {
+        var last = Last();
+        last.Write("消えた");
+
+        var vm = VmWithLast(last, ("a", 60), ("b", 1));
+
+        Assert.Equal("b", vm.Memo.Editor.Title);
+    }
+
+    [Fact]
+    public async Task Opening_a_memo_remembers_it()
+    {
+        var last = Last();
+        var vm = VmWithLast(last, ("a", 60), ("b", 1));
+        Assert.Equal("b", last.Read());   // 起動時に開いたもの
+
+        await vm.Memo.List.OpenAsync("a");
+
+        Assert.Equal("a", last.Read());
+    }
+
+    [Fact]
+    public void Renaming_the_open_memo_updates_the_remembered_title()
+    {
+        var last = Last();
+        var vm = VmWithLast(last, ("a", 1));
+
+        vm.Memo.List.BeginRename("a");
+        vm.Memo.List.RenameText = "z";
+        vm.Memo.List.CommitRename();
+
+        Assert.Equal("z", last.Read());
+    }
+
+    [Fact]
+    public async Task Deleting_the_last_memo_forgets_it_and_deleting_the_open_one_remembers_the_neighbor()
+    {
+        var last = Last();
+        var vm = VmWithLast(last, ("a", 60), ("b", 1));
+
+        await vm.Memo.List.DeleteAsync("b");
+        Assert.Equal("a", last.Read());
+
+        await vm.Memo.List.DeleteAsync("a");
+        Assert.Null(last.Read());
+    }
+
+    [Fact]
+    public void An_unwritable_cache_does_not_stop_the_memo_tab()
+    {
+        File.WriteAllText(_t.Combine("cache"), "邪魔");
+        var vm = VmWithLast(Last(), ("a", 1));
+        Assert.Equal("a", vm.Memo.Editor.Title);
+    }
 }
