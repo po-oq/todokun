@@ -16,6 +16,10 @@ public enum PageKey
     ArrowLeft,
     ArrowRight,
     BeginEdit,
+    /// <summary>Ctrl/Cmd+N（メモの追加。WebView にフォーカスがあるとき Windows はページから転送する）。</summary>
+    NewMemo,
+    /// <summary>Ctrl/Cmd+F（メモの絞り込み欄へ）。</summary>
+    FindMemo,
 }
 
 /// <summary>プレビューの部品（画面の TodoPreview）を使う側（計画 11.7）。</summary>

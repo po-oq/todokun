@@ -196,4 +196,204 @@ public sealed class MemoTabViewModelTests : IDisposable
         Assert.Equal([true], redraws);
         Assert.StartsWith("チェックボックスを更新できませんでした", vm.Editor.Message);
     }
+
+    // ── メモの一覧（2-4） ──
+
+    private MainViewModel VmWithMemos(string? memoNotice = null, params (string Title, int MinutesAgo)[] memos)
+    {
+        var lib = new MemoLibrary(_t.Path);
+        foreach (var (title, ago) in memos)
+        {
+            lib.Write(title, "# " + title);
+            File.SetLastWriteTimeUtc(lib.PathOf(title), DateTime.UtcNow.AddMinutes(-ago));
+        }
+        return new MainViewModel(new DayIndex(_t.Path), new DayStore(_t.Path), Today, _t.Path, false, _ui, _t.Combine("p"),
+            nowMs: () => _now, memoNotice: memoNotice);
+    }
+
+    private string[] MemoFiles() =>
+        Directory.Exists(_t.Combine("memos"))
+            ? [.. Directory.GetFiles(_t.Combine("memos"), "*.md").Select(f => Path.GetFileNameWithoutExtension(f)).Order(StringComparer.Ordinal)]
+            : [];
+
+    [Fact]
+    public void Starts_with_the_newest_memo_open_and_selected_in_the_list()
+    {
+        var vm = VmWithMemos(null, ("古い", 60), ("新しい", 1));
+        Assert.Equal("新しい", vm.Memo.Editor.Title);
+        Assert.Equal(["新しい", "古い"], vm.Memo.List.Items.Select(i => i.Title).ToArray());
+        Assert.True(vm.Memo.List.Items[0].IsSelected);
+    }
+
+    [Fact]
+    public void Starts_with_no_memo_when_there_are_none()
+    {
+        var vm = VmWithMemos();
+        Assert.Null(vm.Memo.Editor.Title);
+        Assert.True(vm.Memo.List.IsEmpty);
+        Assert.Equal("メモなし", vm.Memo.Editor.HeaderText);
+    }
+
+    [Fact]
+    public void Startup_memo_notice_is_shown_on_the_memo_tab_not_the_todo_tab()
+    {
+        var vm = VmWithMemos("古い memo.md が残っています（消して構いません）", ("a", 1));
+        Assert.Equal("古い memo.md が残っています（消して構いません）", vm.Memo.Editor.Message);
+        Assert.Null(vm.Editor.Message);
+    }
+
+    [Fact]
+    public void New_memo_key_creates_a_memo_on_the_memo_tab_only()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+
+        Assert.False(vm.OnWindowKey(AppKey.NewMemo, fromWebView: false));   // TODO タブ
+        Assert.Equal(["a"], MemoFiles());
+
+        vm.SelectTab(AppTab.Memo);
+        Assert.True(vm.OnWindowKey(AppKey.NewMemo, fromWebView: false));
+
+        Assert.Equal(["a", "無題のメモ"], MemoFiles());
+        Assert.Equal("無題のメモ", vm.Memo.Editor.Title);
+        Assert.Equal("無題のメモ", vm.Memo.List.RenamingTitle);
+    }
+
+    [Fact]
+    public void New_memo_from_the_webview_counts_once_when_both_routes_deliver()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        vm.SelectTab(AppTab.Memo);
+
+        _now = 5000;
+        Assert.True(vm.OnWindowKey(AppKey.NewMemo, fromWebView: true));   // Avalonia 経路
+        _now = 5001;
+        vm.Memo.OnPageKey(PageKey.NewMemo);                               // ページ経路（同じ押下）
+
+        Assert.Equal(["a", "無題のメモ"], MemoFiles());
+    }
+
+    [Fact]
+    public void New_memo_again_after_the_window_creates_another()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        vm.SelectTab(AppTab.Memo);
+
+        _now = 5000;
+        vm.OnWindowKey(AppKey.NewMemo, false);
+        vm.Memo.List.CancelRename();
+        _now = 5000 + ModEToggle.WindowMs + 1;
+        vm.OnWindowKey(AppKey.NewMemo, false);
+
+        Assert.Equal(["a", "無題のメモ", "無題のメモ (2)"], MemoFiles());
+    }
+
+    [Fact]
+    public void Find_memo_key_asks_the_view_to_focus_the_search_box()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        var asked = 0;
+        vm.Memo.List.FocusSearchRequested += () => asked++;
+
+        Assert.False(vm.OnWindowKey(AppKey.FindMemo, false));   // TODO タブでは効かない
+        vm.SelectTab(AppTab.Memo);
+        Assert.True(vm.OnWindowKey(AppKey.FindMemo, fromWebView: true));
+
+        Assert.Equal(1, asked);
+    }
+
+    [Fact]
+    public void Find_memo_from_both_routes_asks_once()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        var asked = 0;
+        vm.Memo.List.FocusSearchRequested += () => asked++;
+        vm.SelectTab(AppTab.Memo);
+
+        _now = 9000;
+        vm.OnWindowKey(AppKey.FindMemo, fromWebView: true);
+        _now = 9001;
+        vm.Memo.OnPageKey(PageKey.FindMemo);
+
+        Assert.Equal(1, asked);
+    }
+
+    [Fact]
+    public void Rename_key_starts_renaming_the_open_memo_but_not_from_the_webview()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        vm.SelectTab(AppTab.Memo);
+
+        Assert.False(vm.OnWindowKey(AppKey.RenameMemo, fromWebView: true));
+        Assert.Null(vm.Memo.List.RenamingTitle);
+
+        Assert.True(vm.OnWindowKey(AppKey.RenameMemo, fromWebView: false));
+        Assert.Equal("a", vm.Memo.List.RenamingTitle);
+    }
+
+    [Fact]
+    public void Rename_key_targets_the_focused_item_when_given()
+    {
+        var vm = VmWithMemos(null, ("a", 1), ("b", 5));
+        vm.SelectTab(AppTab.Memo);
+
+        vm.OnWindowKey(AppKey.RenameMemo, false, memoTarget: "b");
+
+        Assert.Equal("b", vm.Memo.List.RenamingTitle);
+    }
+
+    [Fact]
+    public void Delete_key_asks_then_deletes_the_target_not_the_open_memo()
+    {
+        var vm = VmWithMemos(null, ("a", 1), ("b", 5));
+        vm.SelectTab(AppTab.Memo);
+
+        Assert.False(vm.OnWindowKey(AppKey.DeleteMemo, fromWebView: true));
+        Assert.True(vm.OnWindowKey(AppKey.DeleteMemo, false, memoTarget: "b"));
+
+        Assert.Equal(1, _ui.ConfirmDeleteCount);
+        Assert.Equal(["a"], MemoFiles());
+        Assert.Equal("a", vm.Memo.Editor.Title);
+    }
+
+    [Fact]
+    public async Task Memo_keys_are_ignored_while_a_dialog_is_up()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        vm.SelectTab(AppTab.Memo);
+        vm.Memo.Editor.BeginEdit();
+        vm.Memo.Editor.SetDraft("changed");
+        bool? handled = null;
+        _ui.SaveAnswer = SaveChoice.Cancel;
+        _ui.WhileAsking = () => handled = vm.OnWindowKey(AppKey.NewMemo, false);
+
+        await vm.Memo.Editor.LeaveEditAsync();
+
+        Assert.False(handled);
+        Assert.Equal(["a"], MemoFiles());
+    }
+
+    [Fact]
+    public async Task Any_confirming_is_true_while_the_list_asks_to_delete()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        bool? during = null;
+        _ui.WhileAsking = () => during = vm.AnyConfirming;
+
+        await vm.Memo.List.DeleteAsync("a");
+
+        Assert.True(during);
+        Assert.False(vm.AnyConfirming);
+    }
+
+    [Fact]
+    public async Task Closing_the_window_still_asks_about_an_unsaved_memo()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+        vm.Memo.Editor.BeginEdit();
+        vm.Memo.Editor.SetDraft("changed");
+        _ui.SaveAnswer = SaveChoice.Cancel;
+
+        Assert.False(await vm.CanCloseAsync());
+        Assert.Equal(AppTab.Memo, vm.SelectedTab);
+    }
 }

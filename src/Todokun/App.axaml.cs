@@ -38,12 +38,17 @@ public partial class App : Application
 
             Theme.Start();
             var ui = new AvaloniaUiServices(() => desktop.MainWindow);
+            // メモの一覧は、引き継ぎ（AppStartup）が済んだ後に走査する
+            var memoLibrary = new MemoLibrary(start.Paths.DataRoot);
             var vm = new MainViewModel(start.Index, start.Store, today, start.Paths.DataRoot, start.Paths.IsCustomDataRoot, ui,
                 previewDir: previewDir,
                 isDark: () => Theme.IsDark,
                 dataWritable: () => (start.DataWritable, start.DataReason),
                 previewUnavailableReason: start.CacheWritable ? null : start.CacheReason,
-                startupNotice: start.Notice);
+                startupNotice: start.Notice,
+                memoLibrary: memoLibrary,
+                memoIndex: new MemoIndex(memoLibrary),
+                memoNotice: start.MemoNotice);
             Theme.Changed += _ => vm.OnThemeChanged();
             desktop.MainWindow = new MainWindow { DataContext = vm };
         }

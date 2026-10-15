@@ -81,6 +81,11 @@ public sealed partial class MemoListViewModel : ObservableObject
         Rebuild();
     }
 
+    /// <summary>検索欄にフォーカスを移してほしい（Ctrl/Cmd+F）。画面が受ける。</summary>
+    public event Action? FocusSearchRequested;
+
+    public void RequestFocusSearch() => FocusSearchRequested?.Invoke();
+
     public int Count => _index.Count;
     public bool IsEmpty => _index.Count == 0;
     public bool NoMatch => _index.Count > 0 && Items.Count == 0;

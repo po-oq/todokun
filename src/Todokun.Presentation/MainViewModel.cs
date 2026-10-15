@@ -23,7 +23,8 @@ public sealed class MainViewModel : IDocumentPane
         DayIndex index, DayStore store, DateOnly today, string dataRoot, bool isCustomDataRoot, IUiServices ui,
         string previewDir, Func<bool>? isDark = null, Func<DateOnly>? todayProvider = null,
         Func<(bool CanWrite, string? Reason)>? dataWritable = null, string? previewUnavailableReason = null,
-        string? startupNotice = null, Func<long>? nowMs = null, MemoLibrary? memoLibrary = null, MemoIndex? memoIndex = null)
+        string? startupNotice = null, Func<long>? nowMs = null, MemoLibrary? memoLibrary = null, MemoIndex? memoIndex = null,
+        string? memoNotice = null)
     {
         _index = index;
         _ui = ui;
@@ -40,7 +41,8 @@ public sealed class MainViewModel : IDocumentPane
         var library = memoLibrary ?? new MemoLibrary(dataRoot);
         var memos = memoIndex ?? new MemoIndex(library);
         var memoEditor = new MemoEditorSession(library, memos, ui, dataWritable);
-        Memo = new MemoPaneViewModel(memoEditor, previewDir, _isDark, previewUnavailableReason, OpenLocalLink, now);
+        var memoList = new MemoListViewModel(library, memos, memoEditor, ui);
+        Memo = new MemoPaneViewModel(memoEditor, memoList, previewDir, _isDark, previewUnavailableReason, OpenLocalLink, now);
 
         Editor.ContentChanged += reload =>
         {
@@ -56,6 +58,8 @@ public sealed class MainViewModel : IDocumentPane
         else memoEditor.Clear();
         // 起動時のお知らせ（コピー失敗・データルートに書けない）。次に日を開く・編集に入るまで出す
         if (startupNotice is not null) Editor.Message = startupNotice;
+        // メモの引き継ぎのお知らせはメモタブに出す（TODO 側のお知らせとは別）
+        if (memoNotice is not null) memoEditor.Message = memoNotice;
     }
 
     public LeftPaneViewModel LeftPane { get; }
@@ -167,8 +171,9 @@ public sealed class MainViewModel : IDocumentPane
     /// <summary>
     /// ウィンドウの Tunnel で受けたキー（計画 11.6）。処理したら true（画面は <c>Handled</c> にする）。
     /// <paramref name="fromWebView"/>：KeyDown の <c>e.Source</c> またはフォーカスが WebView。
+    /// <paramref name="memoTarget"/>：F2・Delete の対象（フォーカスのある一覧の項目のタイトル。無ければ開いているメモ）。
     /// </summary>
-    public bool OnWindowKey(AppKey key, bool fromWebView)
+    public bool OnWindowKey(AppKey key, bool fromWebView, string? memoTarget = null)
     {
         var onMemo = SelectedTab == AppTab.Memo;
         if ((onMemo ? Memo.Editor : (DocumentEditorSession)Editor).IsConfirming) return false;
@@ -182,6 +187,8 @@ public sealed class MainViewModel : IDocumentPane
                 var target = key == AppKey.Left ? _index.Previous(cur) : _index.Next(cur);
                 if (target is { } d) LeftPane.Cursor.RequestOpenDay(d);
                 return true;   // 端でも食う（一覧・ボタンのフォーカス移動に使わせない）
+            case AppKey.NewMemo or AppKey.FindMemo or AppKey.RenameMemo or AppKey.DeleteMemo:
+                return onMemo && Memo.OnWindowKey(key, fromWebView, memoTarget);
             case AppKey.ModE:
                 // 見えているタブだけに送る。ビューモードでは常に「編集に入る」（冪等。mac ではページに届かず、この経路だけが頼り：P0）
                 return onMemo ? Memo.OnModE() : _modE.OnModE();
@@ -197,6 +204,14 @@ public enum AppKey
     Right,
     /// <summary>Ctrl+E（mac は Cmd+E）。</summary>
     ModE,
+    /// <summary>Ctrl/Cmd+N：メモを追加（メモタブだけ。WebView にフォーカスがあっても扱う）。</summary>
+    NewMemo,
+    /// <summary>Ctrl/Cmd+F：メモの絞り込み欄へ（メモタブだけ。WebView にフォーカスがあっても扱う）。</summary>
+    FindMemo,
+    /// <summary>F2：メモの名前の変更（メモタブだけ。WebView にフォーカスがあるときは扱わない）。</summary>
+    RenameMemo,
+    /// <summary>Delete（mac は Cmd+⌫ も）：メモの削除（メモタブだけ。WebView にフォーカスがあるときは扱わない）。</summary>
+    DeleteMemo,
 }
 
 /// <summary>ウィンドウ上部のタブ。</summary>

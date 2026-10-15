@@ -28,11 +28,14 @@ public abstract record MemoMigrationResult
 /// </summary>
 public static class MemoMigration
 {
+    /// <summary>引き継ぎ元（単一メモだった頃の <c>&lt;root&gt;/memo.md</c>）。</summary>
+    public const string OldFileName = "memo.md";
+
     public const string TitleForOldMemo = "メモ";
 
     public static MemoMigrationResult Run(MemoLibrary library, bool dataWritable)
     {
-        var oldPath = Path.Combine(library.Root, MemoStore.FileName);
+        var oldPath = Path.Combine(library.Root, OldFileName);
         if (!File.Exists(oldPath)) return new MemoMigrationResult.NothingToDo();
         if (!dataWritable) return new MemoMigrationResult.NotWritable();
 
