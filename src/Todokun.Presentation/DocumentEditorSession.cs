@@ -109,6 +109,9 @@ public abstract partial class DocumentEditorSession : ObservableObject
     /// <summary>表示が変わった（開いた・保存した・削除した）。引数 true は同じものの作り直し。UI スレッドで呼ばれる。</summary>
     public event Action<bool>? ContentChanged;
 
+    /// <summary>派生が表示を作り直させたいとき（名前が変わったなど）。</summary>
+    protected void RaiseContentChanged(bool reload) => ContentChanged?.Invoke(reload);
+
     /// <summary>
     /// ビューのチェックボックスのクリックで内容が変わった（ページは先に見た目を変えているので、作り直さない）。
     /// 購読側は「いまのプレビュー」を持ち直すだけでよい。

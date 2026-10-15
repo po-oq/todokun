@@ -30,6 +30,8 @@ public sealed class MemoTabTests : IDisposable
     {
         var store = new DayStore(_t.Path);
         store.Write(Today, "- [ ] a");
+        var memos = new MemoLibrary(_t.Path);
+        if (memos.EnumerateTitles().Count == 0) memos.Create("メモ");   // 開いているメモがある状態から始める
         var vm = new MainViewModel(new DayIndex(_t.Path), store, Today, _t.Path, false, _ui, _t.Combine("p"));
         var w = new MainWindow { DataContext = vm };
         w.Show();
@@ -94,7 +96,7 @@ public sealed class MemoTabTests : IDisposable
         w.KeyPress(Key.S, CommandRaw, PhysicalKey.S, null);
         Flush();
         Assert.True(vm.Memo.Editor.IsEditing);
-        Assert.Equal("- [ ] buy milk", File.ReadAllText(Path.Combine(_t.Path, "memo.md")));
+        Assert.Equal("- [ ] buy milk", File.ReadAllText(Path.Combine(_t.Path, "memos", "メモ.md")));
     }
 
     [AvaloniaFact]
@@ -140,7 +142,7 @@ public sealed class MemoTabTests : IDisposable
     {
         var dir = Environment.GetEnvironmentVariable("TODOKUN_SHOT_DIR");
         if (string.IsNullOrEmpty(dir)) return;
-        new MemoStore(_t.Path).Write("# メモ\n\n- [ ] 牛乳を買う\n- [x] 荷造り\n\n普通の文章です。");
+        new MemoLibrary(_t.Path).Write("メモ", "# メモ\n\n- [ ] 牛乳を買う\n- [x] 荷造り\n\n普通の文章です。");
         var (w, vm) = Open();
         vm.SelectTab(AppTab.Memo);
         var app = Application.Current!;

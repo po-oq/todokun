@@ -23,7 +23,7 @@ public sealed class MainViewModel : IDocumentPane
         DayIndex index, DayStore store, DateOnly today, string dataRoot, bool isCustomDataRoot, IUiServices ui,
         string previewDir, Func<bool>? isDark = null, Func<DateOnly>? todayProvider = null,
         Func<(bool CanWrite, string? Reason)>? dataWritable = null, string? previewUnavailableReason = null,
-        string? startupNotice = null, Func<long>? nowMs = null, MemoStore? memoStore = null)
+        string? startupNotice = null, Func<long>? nowMs = null, MemoLibrary? memoLibrary = null, MemoIndex? memoIndex = null)
     {
         _index = index;
         _ui = ui;
@@ -37,7 +37,9 @@ public sealed class MainViewModel : IDocumentPane
         // 既定以外のデータルート（--data-dir 指定時）はタイトルバーに出す（要件 8.1）
         WindowTitle = isCustomDataRoot ? $"todokun — {dataRoot}" : "todokun";
 
-        var memoEditor = new MemoEditorSession(memoStore ?? new MemoStore(dataRoot), ui, dataWritable);
+        var library = memoLibrary ?? new MemoLibrary(dataRoot);
+        var memos = memoIndex ?? new MemoIndex(library);
+        var memoEditor = new MemoEditorSession(library, memos, ui, dataWritable);
         Memo = new MemoPaneViewModel(memoEditor, previewDir, _isDark, previewUnavailableReason, OpenLocalLink, now);
 
         Editor.ContentChanged += reload =>
@@ -48,7 +50,10 @@ public sealed class MainViewModel : IDocumentPane
         Editor.ContentUpdatedInPlace += () => _current = Editor.Preview;   // チェックボックスのクリック（作り直さない）
         LeftPane.Cursor.OpenDayRequested += day => _ = OpenDayAsync(day);
         Editor.Open(today);
-        memoEditor.Load();
+        // 起動時は一覧の先頭（更新が新しいメモ）。無ければ「メモなし」。（最後に開いたメモは 2-5）
+        var first = memos.Items.FirstOrDefault();
+        if (first is not null) memoEditor.Open(first.Title);
+        else memoEditor.Clear();
         // 起動時のお知らせ（コピー失敗・データルートに書けない）。次に日を開く・編集に入るまで出す
         if (startupNotice is not null) Editor.Message = startupNotice;
     }

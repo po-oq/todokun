@@ -9,15 +9,15 @@ public sealed class CheckboxToggleTests : IDisposable
     private static readonly DateOnly D = new(2026, 10, 14);
     private readonly TempDir _t = new();
     private readonly FakeUiServices _ui = new();
-    private readonly MemoStore _memo;
+    private readonly MemoLibrary _memo;
     private readonly MemoEditorSession _s;
     private bool _canWrite = true;
     private readonly List<string> _events = [];
 
     public CheckboxToggleTests()
     {
-        _memo = new MemoStore(_t.Path);
-        _s = new MemoEditorSession(_memo, _ui, () => (_canWrite, _canWrite ? null : "書けません"));
+        _memo = new MemoLibrary(_t.Path);
+        _s = new MemoEditorSession(_memo, new MemoIndex(_memo), _ui, () => (_canWrite, _canWrite ? null : "書けません"));
         _s.ContentChanged += reload => _events.Add(reload ? "changed:reload" : "changed");
         _s.ContentUpdatedInPlace += () => _events.Add("inplace");
     }
@@ -26,8 +26,8 @@ public sealed class CheckboxToggleTests : IDisposable
 
     private void Open(string text)
     {
-        _memo.Write(text);
-        _s.Load();
+        _memo.Write("m", text);
+        _s.Open("m");
         _events.Clear();
     }
 
@@ -36,7 +36,7 @@ public sealed class CheckboxToggleTests : IDisposable
     {
         Open("- [ ] a\n- [ ] b\n");
         Assert.True(_s.ToggleCheck(1, true));
-        Assert.Equal("- [ ] a\n- [x] b\n", File.ReadAllText(_memo.Path));
+        Assert.Equal("- [ ] a\n- [x] b\n", File.ReadAllText(_memo.PathOf("m")));
         Assert.Equal("- [ ] a\n- [x] b\n", Assert.IsType<DayContent.Loaded>(_s.Content).Text);
         Assert.Equal(["inplace"], _events);   // 楽観的更新：ページは作り直さない
         Assert.True(_s.IsViewing);
@@ -57,25 +57,25 @@ public sealed class CheckboxToggleTests : IDisposable
         Open("- [x] a\n- [ ] b");
         Assert.True(_s.ToggleCheck(0, false));
         Assert.True(_s.ToggleCheck(1, true));
-        Assert.Equal("- [ ] a\n- [x] b", File.ReadAllText(_memo.Path));
+        Assert.Equal("- [ ] a\n- [x] b", File.ReadAllText(_memo.PathOf("m")));
     }
 
     [Fact]
     public void File_changed_outside_is_respected_not_overwritten_with_stale_text()
     {
         Open("- [ ] a\n- [ ] b");
-        File.WriteAllText(_memo.Path, "- [ ] a\n- [ ] b\n- [ ] added outside");   // 表示した後に外で追記
+        File.WriteAllText(_memo.PathOf("m"), "- [ ] a\n- [ ] b\n- [ ] added outside");   // 表示した後に外で追記
         Assert.True(_s.ToggleCheck(0, true));
-        Assert.Equal("- [x] a\n- [ ] b\n- [ ] added outside", File.ReadAllText(_memo.Path));
+        Assert.Equal("- [x] a\n- [ ] b\n- [ ] added outside", File.ReadAllText(_memo.PathOf("m")));
     }
 
     [Fact]
     public void Line_that_is_no_longer_a_task_is_refused_and_the_page_is_redrawn_from_the_file()
     {
         Open("- [ ] a\n- [ ] b");
-        File.WriteAllText(_memo.Path, "changed outside\n- [ ] b");
+        File.WriteAllText(_memo.PathOf("m"), "changed outside\n- [ ] b");
         Assert.False(_s.ToggleCheck(0, true));
-        Assert.Equal("changed outside\n- [ ] b", File.ReadAllText(_memo.Path));   // 書き換えない
+        Assert.Equal("changed outside\n- [ ] b", File.ReadAllText(_memo.PathOf("m")));   // 書き換えない
         Assert.Equal(["changed:reload"], _events);
         Assert.Equal("changed outside\n- [ ] b", Assert.IsType<DayContent.Loaded>(_s.Content).Text);
         Assert.StartsWith("チェックボックスを更新できませんでした", _s.Message);
@@ -85,11 +85,11 @@ public sealed class CheckboxToggleTests : IDisposable
     public void Already_in_the_requested_state_writes_nothing()
     {
         Open("- [ ] a");
-        File.WriteAllText(_memo.Path, "- [x] a");   // 外で先にチェックされた
-        var before = File.GetLastWriteTimeUtc(_memo.Path);
+        File.WriteAllText(_memo.PathOf("m"), "- [x] a");   // 外で先にチェックされた
+        var before = File.GetLastWriteTimeUtc(_memo.PathOf("m"));
         Thread.Sleep(20);
         Assert.True(_s.ToggleCheck(0, true));
-        Assert.Equal(before, File.GetLastWriteTimeUtc(_memo.Path));
+        Assert.Equal(before, File.GetLastWriteTimeUtc(_memo.PathOf("m")));
         Assert.Equal("- [x] a", Assert.IsType<DayContent.Loaded>(_s.Content).Text);
         Assert.Equal(["inplace"], _events);
     }
@@ -100,7 +100,7 @@ public sealed class CheckboxToggleTests : IDisposable
         Open("- [ ] a");
         _canWrite = false;
         Assert.False(_s.ToggleCheck(0, true));
-        Assert.Equal("- [ ] a", File.ReadAllText(_memo.Path));
+        Assert.Equal("- [ ] a", File.ReadAllText(_memo.PathOf("m")));
         Assert.Equal(["changed:reload"], _events);
         Assert.StartsWith("データの保存先に書き込めないため", _s.Message);
     }
@@ -110,9 +110,9 @@ public sealed class CheckboxToggleTests : IDisposable
     {
         Open("- [ ] a");
         byte[] sjis = [0x82, 0xA0, 0x82, 0xA2];
-        File.WriteAllBytes(_memo.Path, sjis);
+        File.WriteAllBytes(_memo.PathOf("m"), sjis);
         Assert.False(_s.ToggleCheck(0, true));
-        Assert.Equal(sjis, File.ReadAllBytes(_memo.Path));
+        Assert.Equal(sjis, File.ReadAllBytes(_memo.PathOf("m")));
         Assert.IsType<DayContent.Failed>(_s.Content);
         Assert.Equal(["changed:reload"], _events);
     }
@@ -121,9 +121,9 @@ public sealed class CheckboxToggleTests : IDisposable
     public void File_deleted_outside_shows_missing_and_does_not_recreate_it()
     {
         Open("- [ ] a");
-        File.Delete(_memo.Path);
+        File.Delete(_memo.PathOf("m"));
         Assert.False(_s.ToggleCheck(0, true));
-        Assert.False(File.Exists(_memo.Path));
+        Assert.False(File.Exists(_memo.PathOf("m")));
         Assert.IsType<DayContent.Missing>(_s.Content);
         Assert.Equal(["changed:reload"], _events);
     }
@@ -133,16 +133,16 @@ public sealed class CheckboxToggleTests : IDisposable
     {
         if (OperatingSystem.IsWindows()) return;
         Open("- [ ] a");
-        File.SetUnixFileMode(_t.Path, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        File.SetUnixFileMode(_memo.Folder, UnixFileMode.UserRead | UnixFileMode.UserExecute);
         try
         {
             Assert.False(_s.ToggleCheck(0, true));
         }
         finally
         {
-            File.SetUnixFileMode(_t.Path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            File.SetUnixFileMode(_memo.Folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
-        Assert.Equal("- [ ] a", File.ReadAllText(_memo.Path));
+        Assert.Equal("- [ ] a", File.ReadAllText(_memo.PathOf("m")));
         Assert.StartsWith("保存できませんでした", _s.Message);
         Assert.Equal(["changed:reload"], _events);
     }
@@ -153,7 +153,7 @@ public sealed class CheckboxToggleTests : IDisposable
         Open("- [ ] a");
         _s.BeginEdit();
         Assert.False(_s.ToggleCheck(0, true));
-        Assert.Equal("- [ ] a", File.ReadAllText(_memo.Path));
+        Assert.Equal("- [ ] a", File.ReadAllText(_memo.PathOf("m")));
         Assert.Empty(_events);
     }
 
@@ -176,6 +176,6 @@ public sealed class CheckboxToggleTests : IDisposable
     {
         Open("- [ ] a\r\n- [ ] b");
         _s.ToggleCheck(0, true);
-        Assert.Equal("- [x] a\n- [ ] b", File.ReadAllText(_memo.Path));
+        Assert.Equal("- [x] a\n- [ ] b", File.ReadAllText(_memo.PathOf("m")));
     }
 }

@@ -16,6 +16,8 @@ public sealed class MemoTabViewModelTests : IDisposable
     {
         var store = new DayStore(_t.Path);
         foreach (var d in days) store.Write(DateOnly.Parse(d), "- [ ] " + d);
+        var memos = new MemoLibrary(_t.Path);
+        if (memos.EnumerateTitles().Count == 0) memos.Create("メモ");   // 開いているメモがある状態から始める
         return new MainViewModel(new DayIndex(_t.Path), store, Today, _t.Path, false, _ui, _t.Combine("p"),
             dataWritable: writable, nowMs: () => _now);
     }
@@ -23,7 +25,7 @@ public sealed class MemoTabViewModelTests : IDisposable
     [Fact]
     public void Starts_on_the_todo_tab_with_the_memo_loaded()
     {
-        new MemoStore(_t.Path).Write("# memo");
+        new MemoLibrary(_t.Path).Write("メモ", "# memo");
         var vm = Vm();
         Assert.Equal(AppTab.Todo, vm.SelectedTab);
         Assert.Equal("# memo", Assert.IsType<PreviewSource.Markdown>(vm.Memo.CurrentPreview).Text);
@@ -173,13 +175,13 @@ public sealed class MemoTabViewModelTests : IDisposable
     [Fact]
     public void Memo_checkbox_click_writes_the_memo_file()
     {
-        new MemoStore(_t.Path).Write("- [ ] m");
+        new MemoLibrary(_t.Path).Write("メモ", "- [ ] m");
         var vm = Vm();
         var redraws = 0;
         vm.Memo.PreviewChanged += (_, _) => redraws++;
         vm.Memo.OnCheckboxToggled(0, true);
         Assert.Equal(0, redraws);
-        Assert.Equal("- [x] m", File.ReadAllText(Path.Combine(_t.Path, "memo.md")));
+        Assert.Equal("- [x] m", File.ReadAllText(Path.Combine(_t.Path, "memos", "メモ.md")));
         Assert.Equal("- [x] m", Assert.IsType<PreviewSource.Markdown>(vm.Memo.CurrentPreview).Text);
     }
 
