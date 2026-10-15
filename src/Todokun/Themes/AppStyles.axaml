@@ -158,6 +158,24 @@
         <Setter Property="Background" Value="{DynamicResource SelectedBackgroundBrush}" />
     </Style>
 
+    <!-- メモの一覧の「✕」：ホバー・フォーカスのときだけ見える（見えなくても Tab では届く） -->
+    <Style Selector="Button.memodelete">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="6,2" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource DimTextBrush}" />
+    </Style>
+    <Style Selector="Grid.memoitem:pointerover Button.memodelete"><Setter Property="Opacity" Value="1" /></Style>
+    <Style Selector="Grid.memoitem:focus-within Button.memodelete"><Setter Property="Opacity" Value="1" /></Style>
+    <Style Selector="Button.memodelete:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SundayBrush}" />
+    </Style>
+
     <!-- 右ペインのバー -->
     <Style Selector="Border.bar">
         <Setter Property="Padding" Value="16,8" />

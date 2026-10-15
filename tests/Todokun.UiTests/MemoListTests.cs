@@ -156,6 +156,7 @@ public sealed class MemoListTests : IDisposable
             Key.Enter => PhysicalKey.Enter,
             Key.Escape => PhysicalKey.Escape,
             Key.F2 => PhysicalKey.F2,
+            Key.Delete => PhysicalKey.Delete,
             _ => PhysicalKey.None,
         };
         w.KeyPress(key, RawInputModifiers.None, physical, null);
@@ -265,5 +266,127 @@ public sealed class MemoListTests : IDisposable
         Flush();
         Assert.Equal("a", vm.Memo.List.RenamingTitle);
         Assert.True(RenameBox(w).IsVisible);
+    }
+
+    // ── 3-3：削除 ──
+
+    private static Button DeleteButton(Window w, string title) =>
+        w.GetVisualDescendants().OfType<Button>().First(b => b.Name == "MemoDeleteButton" && (b.DataContext as MemoListItem)?.Title == title);
+
+    private static Button ItemButton(Window w, string title) =>
+        Find<ItemsControl>(w, "MemoItems").GetVisualDescendants().OfType<Button>()
+            .First(b => b.Classes.Contains("listitem") && (b.DataContext as MemoListItem)?.Title == title);
+
+    [AvaloniaFact]
+    public void The_x_button_deletes_after_confirming_and_opens_the_neighbor()
+    {
+        var (w, vm) = Open(("a", "x", 1), ("b", "y", 10));
+
+        DeleteButton(w, "a").Command!.Execute(null);
+        Flush();
+
+        Assert.Equal(1, _ui.ConfirmDeleteCount);
+        Assert.Contains("『a』", _ui.LastConfirmDeleteMessage);
+        Assert.False(new MemoLibrary(_t.Path).Exists("a"));
+        Assert.Equal("b", vm.Memo.Editor.Title);
+        Assert.Equal(["b"], ItemTitles(w));
+    }
+
+    [AvaloniaFact]
+    public void Cancelling_the_dialog_keeps_the_memo()
+    {
+        _ui.DeleteAnswer = false;
+        var (w, _) = Open(("a", "x", 1));
+
+        DeleteButton(w, "a").Command!.Execute(null);
+        Flush();
+
+        Assert.True(new MemoLibrary(_t.Path).Exists("a"));
+        Assert.Equal(["a"], ItemTitles(w));
+    }
+
+    [AvaloniaFact]
+    public void Delete_key_on_a_focused_item_deletes_that_item_not_the_open_memo()
+    {
+        var (w, vm) = Open(("a", "x", 1), ("b", "y", 10));
+        Assert.Equal("a", vm.Memo.Editor.Title);
+
+        ItemButton(w, "b").Focus();
+        Flush();
+        Press(w, Key.Delete);
+        Flush();
+
+        Assert.Equal(1, _ui.ConfirmDeleteCount);
+        Assert.Contains("『b』", _ui.LastConfirmDeleteMessage);
+        Assert.False(new MemoLibrary(_t.Path).Exists("b"));
+        Assert.True(new MemoLibrary(_t.Path).Exists("a"));
+        Assert.Equal("a", vm.Memo.Editor.Title);
+    }
+
+    [AvaloniaFact]
+    public void Delete_key_in_a_text_box_does_not_delete_the_memo()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+        Find<TextBox>(w, "MemoSearch").Focus();
+        Flush();
+
+        Press(w, Key.Delete);
+        Flush();
+
+        Assert.Equal(0, _ui.ConfirmDeleteCount);
+        Assert.True(new MemoLibrary(_t.Path).Exists("a"));
+
+        // 編集欄の Delete も、文字を消すだけでメモは消さない
+        vm.Memo.Editor.BeginEdit();
+        Flush();
+        var edit = Find<DocumentPaneView>(w, "MemoPane").GetVisualDescendants().OfType<TextBox>().First(x => x.Name == "EditBox");
+        edit.Focus();
+        Flush();
+        Press(w, Key.Delete);
+        Flush();
+        Assert.Equal(0, _ui.ConfirmDeleteCount);
+    }
+
+    [AvaloniaFact]
+    public void Delete_key_while_nothing_special_is_focused_targets_the_open_memo()
+    {
+        var (w, vm) = Open(("a", "x", 1), ("b", "y", 10));
+        Find<Button>(w, "MemoAdd").Focus();   // 一覧の項目ではなく、テキスト入力でもない
+        Flush();
+
+        Press(w, Key.Delete);
+        Flush();
+
+        Assert.Equal(1, _ui.ConfirmDeleteCount);
+        Assert.Contains("『a』", _ui.LastConfirmDeleteMessage);
+        Assert.False(new MemoLibrary(_t.Path).Exists("a"));
+        Assert.Equal("b", vm.Memo.Editor.Title);
+    }
+
+    [AvaloniaFact]
+    public void Cmd_backspace_deletes_on_mac()
+    {
+        if (!OperatingSystem.IsMacOS()) return;
+        var (w, _) = Open(("a", "x", 1));
+        Find<Button>(w, "MemoAdd").Focus();
+        Flush();
+
+        w.KeyPress(Key.Back, RawInputModifiers.Meta, PhysicalKey.Backspace, null);
+        Flush();
+
+        Assert.Equal(1, _ui.ConfirmDeleteCount);
+    }
+
+    [AvaloniaFact]
+    public void Deleting_the_last_memo_shows_the_empty_state()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+
+        DeleteButton(w, "a").Command!.Execute(null);
+        Flush();
+
+        Assert.Null(vm.Memo.Editor.Title);
+        Assert.True(Find<TextBlock>(w, "MemoEmpty").IsVisible);
+        Assert.Equal("メモなし", vm.Memo.Editor.HeaderText);
     }
 }

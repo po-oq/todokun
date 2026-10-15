@@ -76,15 +76,18 @@ public partial class MainWindow : Window
         else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Right) key = AppKey.Right;
         else if (e.KeyModifiers == CommandModifiers && e.Key == Key.E) key = AppKey.ModE;
         else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.F2) key = AppKey.RenameMemo;
+        else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Delete) key = AppKey.DeleteMemo;
+        else if (OperatingSystem.IsMacOS() && e.KeyModifiers == KeyModifiers.Meta && e.Key == Key.Back) key = AppKey.DeleteMemo;
         if (key is null) return;
 
         // WebView にフォーカスがあるか：e.Source または FocusManager のどちらかが NativeWebView（P0 で両方とも確認済み）
         var focused = FocusManager?.GetFocusedElement();
         var fromWebView = e.Source is NativeWebView || focused is NativeWebView;
 
-        // F2 は、テキスト入力（編集欄・絞り込み欄・名前の入力欄）では食わない。対象はフォーカスのある一覧の項目、無ければ開いているメモ
+        // F2・Delete は、テキスト入力（編集欄・絞り込み欄・名前の入力欄）では食わない。
+        // 対象はフォーカスのある一覧の項目（✕ のボタンも同じ項目）、無ければ開いているメモ
         string? memoTarget = null;
-        if (key == AppKey.RenameMemo)
+        if (key is AppKey.RenameMemo or AppKey.DeleteMemo)
         {
             if (focused is TextBox) return;
             memoTarget = (focused as Control)?.DataContext is MemoListItem item ? item.Title : null;

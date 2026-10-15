@@ -29,7 +29,7 @@
                 <ItemsControl x:Name="MemoItems" ItemsSource="{Binding Items}" Margin="6,0,6,6">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:MemoListItem">
-                            <Grid>
+                            <Grid Classes="memoitem">
                                 <Button Classes="listitem" Classes.selected="{Binding IsSelected}" Command="{Binding OpenCommand}"
                                         HorizontalAlignment="Stretch" IsVisible="{Binding IsNotRenaming}"
                                         AutomationProperties.AutomationId="{Binding Title, StringFormat=MemoItem_{0}}">
@@ -43,6 +43,12 @@
                                         </Grid>
                                     </StackPanel>
                                 </Button>
+                                <!-- 削除（ホバー・フォーカスで現れる）。確認ダイアログが出る -->
+                                <Button x:Name="MemoDeleteButton" Classes="memodelete" Content="✕"
+                                        IsVisible="{Binding IsNotRenaming}" Command="{Binding DeleteCommand}"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0"
+                                        ToolTip.Tip="削除（Delete）"
+                                        AutomationProperties.AutomationId="{Binding Title, StringFormat=MemoDelete_{0}}" />
                                 <!-- 名前の変更：その場で入力欄。Enter／フォーカスが外れたら確定、Esc で取消（キーは MemoListView.axaml.cs） -->
                                 <StackPanel IsVisible="{Binding IsRenaming}" Spacing="2" Margin="2,2">
                                     <TextBox x:Name="RenameBox" Text="{Binding RenameText}"
