@@ -27,6 +27,15 @@ public partial class DocumentPaneView : UserControl
         EditBox.AddHandler(KeyDownEvent, OnEditKeyDownBubble, RoutingStrategies.Bubble);
         EditBox.TextChanged += OnTextChanged;
         SaveLabel.Text = $"保存　{(CommandModifiers == KeyModifiers.Meta ? "Cmd" : "Ctrl")}+S";
+        // 見出しのクリックで名前の変更（メモのときだけ。日は変えられない）
+        DayText.PointerPressed += (_, e) =>
+        {
+            if (DataContext is IDocumentPane { CanRenameHeader: true } pane && e.GetCurrentPoint(DayText).Properties.IsLeftButtonPressed)
+            {
+                e.Handled = true;
+                pane.BeginRenameHeader();
+            }
+        };
     }
 
     private static KeyModifiers CommandModifiers =>
@@ -36,6 +45,7 @@ public partial class DocumentPaneView : UserControl
     {
         if (_session is not null) _session.PropertyChanged -= OnSessionChanged;
         _session = (DataContext as IDocumentPane)?.Editor;
+        DayText.Cursor = DataContext is IDocumentPane { CanRenameHeader: true } ? new Cursor(StandardCursorType.Ibeam) : Cursor.Default;
         if (_session is not null) _session.PropertyChanged += OnSessionChanged;
     }
 

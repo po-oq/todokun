@@ -29,19 +29,29 @@
                 <ItemsControl x:Name="MemoItems" ItemsSource="{Binding Items}" Margin="6,0,6,6">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:MemoListItem">
-                            <Button Classes="listitem" Classes.selected="{Binding IsSelected}" Command="{Binding OpenCommand}"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="{Binding Title, StringFormat=MemoItem_{0}}">
-                                <StackPanel Spacing="2">
-                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="{Binding Snippet}" Classes="dim" TextTrimming="CharacterEllipsis"
-                                                   FontWeight="Normal" />
-                                        <TextBlock Grid.Column="1" Text="{Binding ModifiedText}" Classes="dim"
-                                                   FontWeight="Normal" Margin="8,0,0,0" />
-                                    </Grid>
+                            <Grid>
+                                <Button Classes="listitem" Classes.selected="{Binding IsSelected}" Command="{Binding OpenCommand}"
+                                        HorizontalAlignment="Stretch" IsVisible="{Binding IsNotRenaming}"
+                                        AutomationProperties.AutomationId="{Binding Title, StringFormat=MemoItem_{0}}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="{Binding Snippet}" Classes="dim" TextTrimming="CharacterEllipsis"
+                                                       FontWeight="Normal" />
+                                            <TextBlock Grid.Column="1" Text="{Binding ModifiedText}" Classes="dim"
+                                                       FontWeight="Normal" Margin="8,0,0,0" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Button>
+                                <!-- 名前の変更：その場で入力欄。Enter／フォーカスが外れたら確定、Esc で取消（キーは MemoListView.axaml.cs） -->
+                                <StackPanel IsVisible="{Binding IsRenaming}" Spacing="2" Margin="2,2">
+                                    <TextBox x:Name="RenameBox" Text="{Binding RenameText}"
+                                             AutomationProperties.AutomationId="MemoRenameBox" />
+                                    <TextBlock x:Name="RenamePreviewText" Text="{Binding RenamePreview}" Classes="dim"
+                                               TextWrapping="Wrap" Margin="4,0"
+                                               IsVisible="{Binding RenamePreview, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 </StackPanel>
-                            </Button>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

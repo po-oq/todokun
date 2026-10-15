@@ -8,7 +8,7 @@
 - 追加：`MemoTitle`・`MemoLibrary`・`MemoIndex`・`MemoMigration`（いずれも `src/Todokun.Core/`）とそのテスト。`AppStartup`／`StartupResult` に `Migration`・`MemoNotice` を足した（起動時に `memo.md` を `memos/メモ.md` へ引き継ぐ）。画面・`MemoStore`・`MemoEditorSession` は未変更。
 - テスト：`dotnet test Todokun.slnx` が 523＋41 件で全部通る。`dotnet build` は警告 0。
 - 未確認：画面でのメモの一覧（P3 で載せる）。Windows 実機はすべて未実施。
-- P1 は 3 コミット済み（`73466a9`・`4b7e283`・`c6d414e`）。P2 も全部コミット済み（2-1 `5018ea5`・2-2 `74e9f4f`・2-3 `0ac551d`・2-4 `c2305c1`・2-5 `958f69e`）。**P3 の 3-1 を実装した（未コミット）**：メモタブを 左ペイン（`MemoListView`：ヘッダー・件数・＋・一覧の知らせ・絞り込み欄・項目・空状態）＋スプリッター＋右ペイン（既存の `DocumentPaneView`）に（`MainWindow.axaml` の `MemoRoot`）。項目クリックで開く・＋で追加（`MemoListViewModel.AddCommand`）・絞り込み・Ctrl/Cmd+F の絞り込み欄へのフォーカス（`FocusSearchRequested`）。UI テスト `MemoListTests` 8 件を足した。ライト・ダークのスクリーンショットで見た目を確認。テストは 605＋49 件、警告 0。**名前の変更の入力欄・✕・ウィンドウのキー（N・F・F2・Delete）はまだ画面にない**（3-2〜3-4）。
+- P1（3 コミット）・P2（5 コミット）・P3 の 3-1（`63bdc61`）はコミット済み。**3-2 を実装した（未コミット）**：項目の名前の入力欄（Enter／フォーカスが外れたら確定・Esc で取消。IME 処理済みのキーは扱わない）・入力中の「→ 『◯◯』で保存されます」・＋で追加した直後の入力状態・項目のダブルクリック（開いているメモのときだけ。`BeginRenameOfOpen`）・F2（`MainWindow` の Tunnel。TextBox では食わない。対象はフォーカスのある項目、無ければ開いているメモ）・見出しのクリック（`IDocumentPane.CanRenameHeader`／`BeginRenameHeader`。メモのときだけ）。絞り込みで隠れた項目の名前の変更は絞り込みを解く。テストは 609＋55 件、警告 0。**未実装：✕・Delete（3-3）、ウィンドウの Ctrl/Cmd+N・F・Delete と `PageKey` の転送（3-4）**。日本語入力の変換中の Enter・Esc は mac の合成入力では確かめにくい（Windows 実機の項目）。
 
 ## 読むもの（正はこちら）
 
@@ -29,9 +29,9 @@
 
 ## 次にやること
 
-1. 3-1 をコミットするか利用者に確認する（頼まれたときだけコミット）。
+1. 3-2 をコミットするか利用者に確認する（頼まれたときだけコミット）。
 2. （済）mac での引き継ぎの起動確認。
-3. P3 の 3-2（追加・名前の変更の入力欄）から（計画 4 章）。
+3. P3 の 3-3（削除）から（計画 4 章）。
 4. フェーズの終わりごとに `dotnet test`・`dotnet build`（警告 0）・進捗と HANDOFF の更新 → 止まって報告。
 
 ## 実装で決めたこと（計画からの補足）

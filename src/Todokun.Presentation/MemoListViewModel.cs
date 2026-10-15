@@ -5,17 +5,29 @@ using Todokun.Core;
 
 namespace Todokun.Presentation;
 
-/// <summary>一覧の 1 件（表示用。状態は <see cref="MemoListViewModel"/> が持ち、変わるたびに作り直す）。</summary>
-public sealed class MemoListItem
+/// <summary>
+/// 一覧の 1 件（表示用。状態は <see cref="MemoListViewModel"/> が持ち、変わるたびに作り直す）。
+/// 名前の入力欄（<see cref="RenameText"/>）の編集は、一覧の VM に書き戻す。
+/// </summary>
+public sealed partial class MemoListItem : ObservableObject
 {
+    private readonly Action<string> _renameTextChanged;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RenamePreview))]
+    private string _renameText;
+
     public MemoListItem(MemoEntry entry, string modifiedText, bool isSelected, bool isRenaming,
-        Func<string, Task> open, Func<string, Task> delete, Action<string> beginRename)
+        Func<string, Task> open, Func<string, Task> delete, Action<string> beginRename,
+        string renameText, Action<string> renameTextChanged)
     {
         Title = entry.Title;
         Snippet = entry.Snippet;
         ModifiedText = modifiedText;
         IsSelected = isSelected;
         IsRenaming = isRenaming;
+        _renameText = renameText;
+        _renameTextChanged = renameTextChanged;
         OpenCommand = new AsyncRelayCommand(() => open(Title));
         DeleteCommand = new AsyncRelayCommand(() => delete(Title));
         BeginRenameCommand = new RelayCommand(() => beginRename(Title));
@@ -26,9 +38,15 @@ public sealed class MemoListItem
     public string ModifiedText { get; }
     public bool IsSelected { get; }
     public bool IsRenaming { get; }
+    public bool IsNotRenaming => !IsRenaming;
     public IAsyncRelayCommand OpenCommand { get; }
     public IAsyncRelayCommand DeleteCommand { get; }
     public IRelayCommand BeginRenameCommand { get; }
+
+    /// <summary>入力中の名前が正規化で変わるときの予告。</summary>
+    public string? RenamePreview => IsRenaming ? MemoListViewModel.PreviewOf(RenameText) : null;
+
+    partial void OnRenameTextChanged(string value) => _renameTextChanged(value);
 }
 
 /// <summary>
@@ -99,14 +117,13 @@ public sealed partial class MemoListViewModel : ObservableObject
     public string CountText => Query.Trim().Length == 0 ? $"{Count} 件" : $"{Items.Count} / {Count} 件";
 
     /// <summary>入力中の名前が正規化で変わるときだけ「→ 『◯◯』で保存されます」。</summary>
-    public string? RenamePreview
+    public string? RenamePreview => RenamingTitle is null ? null : PreviewOf(RenameText);
+
+    /// <summary>正規化で変わるときだけ「→ 『◯◯』で保存されます」。変わらない・空になるなら null。</summary>
+    public static string? PreviewOf(string text)
     {
-        get
-        {
-            if (RenamingTitle is null) return null;
-            var normalized = MemoTitle.Normalize(RenameText);
-            return normalized.Length == 0 || normalized == RenameText ? null : $"→ 『{normalized}』で保存されます";
-        }
+        var normalized = MemoTitle.Normalize(text);
+        return normalized.Length == 0 || normalized == text ? null : $"→ 『{normalized}』で保存されます";
     }
 
     partial void OnQueryChanged(string value) => Rebuild();
@@ -177,9 +194,19 @@ public sealed partial class MemoListViewModel : ObservableObject
             Vanished(title);
             return;
         }
+        if (!Items.Any(i => Same(i.Title, title))) Query = "";   // 絞り込みで隠れていたら、入力欄が見えるように解く
         _renamingIsNew = false;
         RenameText = title;
         RenamingTitle = title;
+    }
+
+    /// <summary>
+    /// 項目のダブルクリック：1 回目のクリックでそのメモを開けていたとき（開いているメモのとき）だけ名前の変更を始める。
+    /// 確認でキャンセルされて開けなかったときは何もしない。
+    /// </summary>
+    public void BeginRenameOfOpen(string title)
+    {
+        if (Same(title, _editor.Title)) BeginRename(title);
     }
 
     /// <summary>
@@ -327,7 +354,8 @@ public sealed partial class MemoListViewModel : ObservableObject
                 e, FormatModified(e.ModifiedUtc, now),
                 isSelected: Same(e.Title, _editor.Title),
                 isRenaming: RenamingTitle is not null && Same(e.Title, RenamingTitle),
-                open: OpenAsync, delete: DeleteAsync, beginRename: BeginRename))
+                open: OpenAsync, delete: DeleteAsync, beginRename: BeginRename,
+                renameText: RenameText, renameTextChanged: text => RenameText = text))
         ];
         OnPropertyChanged(nameof(Count));
         OnPropertyChanged(nameof(IsEmpty));

@@ -75,11 +75,21 @@ public partial class MainWindow : Window
         if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Left) key = AppKey.Left;
         else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Right) key = AppKey.Right;
         else if (e.KeyModifiers == CommandModifiers && e.Key == Key.E) key = AppKey.ModE;
+        else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.F2) key = AppKey.RenameMemo;
         if (key is null) return;
 
         // WebView にフォーカスがあるか：e.Source または FocusManager のどちらかが NativeWebView（P0 で両方とも確認済み）
-        var fromWebView = e.Source is NativeWebView || FocusManager?.GetFocusedElement() is NativeWebView;
-        if (vm.OnWindowKey(key.Value, fromWebView)) e.Handled = true;
+        var focused = FocusManager?.GetFocusedElement();
+        var fromWebView = e.Source is NativeWebView || focused is NativeWebView;
+
+        // F2 は、テキスト入力（編集欄・絞り込み欄・名前の入力欄）では食わない。対象はフォーカスのある一覧の項目、無ければ開いているメモ
+        string? memoTarget = null;
+        if (key == AppKey.RenameMemo)
+        {
+            if (focused is TextBox) return;
+            memoTarget = (focused as Control)?.DataContext is MemoListItem item ? item.Title : null;
+        }
+        if (vm.OnWindowKey(key.Value, fromWebView, memoTarget)) e.Handled = true;
     }
 
     // 閉じる（計画 11.4・6-3）：未保存なら「保存しますか？」。ダイアログは Post で出す（Closing の中で await しない）。

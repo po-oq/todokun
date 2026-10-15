@@ -80,6 +80,8 @@ public sealed class MainViewModel : IDocumentPane
     public LeftPaneViewModel LeftPane { get; }
     public DayEditorSession Editor { get; }
     DocumentEditorSession IDocumentPane.Editor => Editor;
+    bool IDocumentPane.CanRenameHeader => false;   // 日の見出しは変えられない
+    void IDocumentPane.BeginRenameHeader() { }
     public MemoPaneViewModel Memo { get; }
     public string WindowTitle { get; }
 

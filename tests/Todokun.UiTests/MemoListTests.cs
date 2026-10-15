@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Todokun.Core;
@@ -143,5 +145,125 @@ public sealed class MemoListTests : IDisposable
         vm.Memo.List.RequestFocusSearch();
         Flush();
         Assert.True(Find<TextBox>(w, "MemoSearch").IsFocused);
+    }
+
+    // ── 3-2：追加・名前の変更 ──
+
+    private static void Press(Window w, Key key)
+    {
+        var physical = key switch
+        {
+            Key.Enter => PhysicalKey.Enter,
+            Key.Escape => PhysicalKey.Escape,
+            Key.F2 => PhysicalKey.F2,
+            _ => PhysicalKey.None,
+        };
+        w.KeyPress(key, RawInputModifiers.None, physical, null);
+    }
+
+    private static TextBox RenameBox(Window w) => Find<TextBox>(w, "RenameBox");
+
+    [AvaloniaFact]
+    public void Plus_shows_the_rename_box_with_the_default_name()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+
+        Find<Button>(w, "MemoAdd").Command!.Execute(null);
+        Flush();
+
+        Assert.Equal("無題のメモ", vm.Memo.List.RenamingTitle);
+        var box = RenameBox(w);
+        Assert.True(box.IsVisible);
+        Assert.Equal("無題のメモ", box.Text);
+        Assert.True(box.IsFocused);
+    }
+
+    [AvaloniaFact]
+    public void Enter_in_the_rename_box_commits_and_enters_edit_mode()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+        Find<Button>(w, "MemoAdd").Command!.Execute(null);
+        Flush();
+
+        RenameBox(w).Text = "買い物";
+        Flush();
+        Press(w, Key.Enter);
+        Flush();
+
+        Assert.Equal("買い物", vm.Memo.Editor.Title);
+        Assert.True(new MemoLibrary(_t.Path).Exists("買い物"));
+        Assert.Null(vm.Memo.List.RenamingTitle);
+        Assert.True(vm.Memo.Editor.IsEditing);
+        Assert.DoesNotContain(w.GetVisualDescendants().OfType<TextBox>(), x => x.Name == "RenameBox" && x.IsEffectivelyVisible);
+    }
+
+    [AvaloniaFact]
+    public void Escape_in_the_rename_box_keeps_the_default_name_and_enters_edit_mode()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+        Find<Button>(w, "MemoAdd").Command!.Execute(null);
+        Flush();
+
+        RenameBox(w).Text = "捨てる";
+        Flush();
+        Press(w, Key.Escape);
+        Flush();
+
+        Assert.Equal("無題のメモ", vm.Memo.Editor.Title);
+        Assert.True(vm.Memo.Editor.IsEditing);
+        Assert.Null(vm.Memo.List.RenamingTitle);
+    }
+
+    [AvaloniaFact]
+    public void Losing_focus_commits_the_rename_once()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+        Find<Button>(w, "MemoAdd").Command!.Execute(null);
+        Flush();
+
+        RenameBox(w).Text = "会議";
+        Flush();
+        Find<TextBox>(w, "MemoSearch").Focus();
+        Flush();
+
+        Assert.Equal("会議", vm.Memo.Editor.Title);
+        Assert.Equal(["a", "会議"], new MemoLibrary(_t.Path).EnumerateTitles().Order(StringComparer.Ordinal).ToArray());
+        Assert.Null(vm.Memo.List.RenamingTitle);
+    }
+
+    [AvaloniaFact]
+    public void Rename_box_shows_the_preview_only_when_the_name_changes()
+    {
+        var (w, _) = Open(("a", "x", 1));
+        Find<Button>(w, "MemoAdd").Command!.Execute(null);
+        Flush();
+
+        var preview = Find<TextBlock>(w, "RenamePreviewText");
+        Assert.False(preview.IsVisible);
+
+        RenameBox(w).Text = "A/B:テスト?";
+        Flush();
+
+        Assert.True(preview.IsVisible);
+        Assert.Equal("→ 『A／B：テスト？』で保存されます", preview.Text);
+    }
+
+    [AvaloniaFact]
+    public void F2_renames_the_open_memo_but_not_from_a_text_box()
+    {
+        var (w, vm) = Open(("a", "x", 1));
+
+        Find<TextBox>(w, "MemoSearch").Focus();
+        Flush();
+        Press(w, Key.F2);
+        Flush();
+        Assert.Null(vm.Memo.List.RenamingTitle);
+
+        Find<Button>(w, "MemoAdd").Focus();
+        Flush();
+        Press(w, Key.F2);
+        Flush();
+        Assert.Equal("a", vm.Memo.List.RenamingTitle);
+        Assert.True(RenameBox(w).IsVisible);
     }
 }

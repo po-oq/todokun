@@ -481,4 +481,39 @@ public sealed class MemoTabViewModelTests : IDisposable
         var vm = VmWithLast(Last(), ("a", 1));
         Assert.Equal("a", vm.Memo.Editor.Title);
     }
+
+    // ── 見出しのクリックで名前の変更（3-2） ──
+
+    [Fact]
+    public void Only_the_memo_header_can_be_renamed()
+    {
+        var vm = VmWithMemos(null, ("a", 1));
+
+        Assert.True(vm.Memo.CanRenameHeader);
+        Assert.False(((IDocumentPane)vm).CanRenameHeader);
+
+        vm.Memo.BeginRenameHeader();
+        Assert.Equal("a", vm.Memo.List.RenamingTitle);
+    }
+
+    [Fact]
+    public void Header_rename_is_not_available_without_a_memo()
+    {
+        var vm = VmWithMemos();
+        Assert.False(vm.Memo.CanRenameHeader);
+        vm.Memo.BeginRenameHeader();
+        Assert.Null(vm.Memo.List.RenamingTitle);
+    }
+
+    [Fact]
+    public void Rename_of_an_item_hidden_by_the_filter_clears_the_filter_so_the_box_is_visible()
+    {
+        var vm = VmWithMemos(null, ("a", 1), ("b", 5));
+        vm.Memo.List.Query = "zzz";
+
+        vm.Memo.List.BeginRename("a");
+
+        Assert.Equal("", vm.Memo.List.Query);
+        Assert.True(vm.Memo.List.Items.Single(i => i.Title == "a").IsRenaming);
+    }
 }

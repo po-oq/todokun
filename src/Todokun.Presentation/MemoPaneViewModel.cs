@@ -40,6 +40,15 @@ public sealed class MemoPaneViewModel : IDocumentPane
     public MemoListViewModel List { get; }
     DocumentEditorSession IDocumentPane.Editor => Editor;
 
+    /// <summary>見出しのクリックで名前を変えられる（開いているメモがあるとき）。</summary>
+    public bool CanRenameHeader => Editor.Title is not null;
+
+    /// <summary>見出しのクリック：開いているメモの名前の変更を始める（一覧の項目がその場で入力欄になる）。</summary>
+    public void BeginRenameHeader()
+    {
+        if (Editor.Title is { } title) List.BeginRename(title);
+    }
+
     // ── IPreviewHost ──
     public string PreviewDir { get; }
     public bool IsDark => _isDark();

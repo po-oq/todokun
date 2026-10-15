@@ -538,4 +538,22 @@ public sealed class MemoListViewModelTests : IDisposable
         await _vm.OpenAsync("b");
         Assert.Null(_vm.Notice);
     }
+
+    [Fact]
+    public async Task Double_click_renames_only_the_memo_that_the_first_click_opened()
+    {
+        await _vm.OpenAsync("b");
+        _vm.BeginRenameOfOpen("b");
+        Assert.Equal("b", _vm.RenamingTitle);
+        _vm.CancelRename();
+
+        // 1 回目のクリックが確認でキャンセルされた（a は開けていない）
+        _ui.SaveAnswer = SaveChoice.Cancel;
+        _editor.BeginEdit();
+        _editor.SetDraft("typing");
+        await _vm.OpenAsync("a");
+        _vm.BeginRenameOfOpen("a");
+
+        Assert.Null(_vm.RenamingTitle);
+    }
 }
