@@ -391,3 +391,14 @@ TODO・メモのビューで、チェックボックスをクリックして md 
 - **書き換え**：ファイルを読み直し、`TaskToggle.Toggle`（Core の純粋関数。印の 1 文字だけ変える。CRLF・入れ子・引用・番号付き対応）で検証してから書く。表示した後に外で変わっていても、古い内容で上書きしない。
 - **成功**：`Content` を更新して `ContentUpdatedInPlace`（ページは作り直さない。次の描画のためにプレビューを持ち直すだけ）。**失敗**：理由を `Message` に出し、`ContentChanged(reload: true)` でページを作り直して見た目を戻す。
 - **決めたこと**：ビューのときだけ効く／Undo は無い／保存と同じく LF に統一して書く／読めない・無い・書けないは何も書かない。
+
+## 付録 C：メモの複数化（2026-10-15 追加）
+
+メモタブを「アプリ全体で 1 つのメモ」から、タイトルを付けて複数持てるものにした。要件は 8.5 章（詳細は `memo-list-requirements.md`）、設計は `memo-list-design.html`、実装の計画・決めごと・レビューは `memo-list-plan.md`（図解は `.html`）と `memo-list-review.html`。
+
+- **保存**：`<データルート>/memos/<タイトル>.md`（タイトル＝ファイル名）。`MemoTitle`（正規化。冪等）・`MemoLibrary`（読み書き・作成・改名・削除。上書きしない）・`MemoIndex`（一覧。更新が新しい順・先頭 4 KB の抜粋・絞り込み）。古い `MemoStore` は無くなった。
+- **引き継ぎ**：`MemoMigration`。判定は「`memo.md` があるか」。バイト列のまま一時ファイル → `File.Move`（上書きなし）→ 成功後に元を消す。どの段で止まっても次の起動でやり直せる。結果とお知らせは `StartupResult.Migration`／`MemoNotice`（TODO 側の `Notice` とは別）。
+- **共通化**：`DocumentEditorSession` に `DeleteWhenBlank`（メモは false＝空でも残す）・`HasDocument`（「メモなし」）・`RunConfirmingAsync`（一覧の確認の間も `IsConfirming` を立てる）を足した。TODO の挙動は変えていない。
+- **画面**：`MemoEditorSession`（いま開いている 1 つ・`Open`／`TryOpenAsync`／`RenameTo`／`Clear`）・`MemoListViewModel`（要求 → 確認 → 確定。確定は冪等）・`MemoListView`（左ペイン）。最後に開いたメモは `MemoLastOpened`（`cache/last-memo.txt`）。
+- **キー**：`AppKey.NewMemo／FindMemo／RenameMemo／DeleteMemo`、`PageKey.NewMemo／FindMemo`（`key:NewMemo`・`key:FindMemo`）。N・F は WebView にフォーカスがあっても効き、2 経路の重複は短い間で捨てる。F2・Delete は文字入力欄では効かず、対象はフォーカスのある項目。
+- **決めたこと**：起動時は最後に開いていたメモ／データルートが書けないときは古い `memo.md` を表示せず知らせる／名前の入力でフォーカスが外れたら確定／先頭の `.` も取る（一覧が `.` 始まりを無視するため）／ページ側の N・F の転送は TODO タブのプレビューにも入る（WebView 既定の検索バーは出ない）。

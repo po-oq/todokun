@@ -8,7 +8,7 @@
 - 追加：`MemoTitle`・`MemoLibrary`・`MemoIndex`・`MemoMigration`（いずれも `src/Todokun.Core/`）とそのテスト。`AppStartup`／`StartupResult` に `Migration`・`MemoNotice` を足した（起動時に `memo.md` を `memos/メモ.md` へ引き継ぐ）。画面・`MemoStore`・`MemoEditorSession` は未変更。
 - テスト：`dotnet test Todokun.slnx` が 523＋41 件で全部通る。`dotnet build` は警告 0。
 - 未確認：画面でのメモの一覧（P3 で載せる）。Windows 実機はすべて未実施。
-- P1（3 コミット）・P2（5 コミット）・P3 の 3-1（`63bdc61`）・3-2（`e9753f0`）・3-3（`157c6b2`）はコミット済み。**3-4 を実装した（未コミット）**：`MainWindow` の Tunnel に Ctrl/Cmd+N・Ctrl/Cmd+F（メモタブだけ。WebView・編集欄・検索欄にフォーカスがあっても効く。重複は 2-4 の短い間の除去）・`KeyForwarderScript` に `key:NewMemo`／`key:FindMemo`（Windows の WebView2 用。`preventDefault`・押し続けは送らない）・`PreviewKey`／`PageKey` に NewMemo・FindMemo・一覧の ↑↓（`XYFocus.NavigationModes`）・✕は Tab の対象にしない。UI テストを足して 614＋67 件、警告 0。実アプリ（mac・`--data-dir`）の起動も確認。**これで P3 は実装完了**。残りは P4（4-1：README・要件・`todo-requirements.md` 8.5 章・13.3・`todokun-plan.md` 付録 C・`memo-list-requirements.md`・`memo-list-design.html`）と、mac での受け入れ条件（Gherkin 5 本）の目視確認。副作用：ページ側のスクリプトは TODO タブのプレビューにも入るので、Ctrl/Cmd+F・N の WebView 既定動作（検索バー）は TODO タブでも出なくなる。
+- P1（3 コミット）・P2（5 コミット）・P3（3-1 `63bdc61`・3-2 `e9753f0`・3-3 `157c6b2`・3-4 `1ddacbc`）はコミット済み。**P4 の 4-1（文書の仕上げ）を実施した（未コミット）**：`README.md`（メモタブの画面・キー・`data/memos/`・`memo.md` の引き継ぎ・`cache/last-memo.txt`）、`docs/todo-requirements.md`（8.5 章を複数メモに・11 章のキー表と N・F の転送・13.3 の Windows 実機の確認項目）、`docs/memo-list-requirements.md`（正規化の順番を計画 7.1 にそろえた・Open Questions の決着・名前の入力でフォーカスが外れたら確定）、`docs/memo-list-design.html`（フォーカスが外れたら確定）、`docs/todokun-plan.md`／`.html` に付録 C。**実装と文書はすべて揃った。残りは確認だけ**：mac で受け入れ条件（Gherkin 5 本）の目視（ライト・ダーク）と、Windows 実機（`docs/todo-requirements.md` 13.3）。テストは 614＋67 件、警告 0。
 
 ## 読むもの（正はこちら）
 
@@ -29,9 +29,9 @@
 
 ## 次にやること
 
-1. 3-4 をコミットするか利用者に確認する（頼まれたときだけコミット）。
+1. 4-1 をコミットするか利用者に確認する（頼まれたときだけコミット）。その後、ブランチ `feature/memo-list-core` を `main` に取り込むか（push・PR は頼まれたときだけ）。
 2. （済）mac での引き継ぎの起動確認。
-3. 要件の受け入れ条件（Gherkin 5 本）を mac で一通り確かめる（ライト・ダーク。品質ゲート 3：TODO タブ・←→・Ctrl+E が変わっていない）。その後 P4 の 4-1（計画 5 章）。
+3. 要件の受け入れ条件（Gherkin 5 本）を mac で一通り確かめる（ライト・ダーク。品質ゲート 3：TODO タブ・←→・Ctrl+E が変わっていない）。Windows 実機の確認は 13.3 の項目。
 4. フェーズの終わりごとに `dotnet test`・`dotnet build`（警告 0）・進捗と HANDOFF の更新 → 止まって報告。
 
 ## 実装で決めたこと（計画からの補足）
