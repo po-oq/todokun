@@ -390,6 +390,22 @@ public abstract partial class DocumentEditorSession : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 一覧など、外から出す確認ダイアログの間、<see cref="IsConfirming"/> を立てる（キー・閉じる・チェックボックスの守りがこれを見ている）。
+    /// </summary>
+    public async Task<T> RunConfirmingAsync<T>(Func<Task<T>> ask)
+    {
+        IsConfirming = true;
+        try
+        {
+            return await ask();
+        }
+        finally
+        {
+            IsConfirming = false;
+        }
+    }
+
     private void ToView()
     {
         _generation++;
